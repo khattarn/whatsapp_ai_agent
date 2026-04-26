@@ -1,0 +1,968 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>WhatsApp AI Agent Dashboard</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/dayjs/1.11.10/dayjs.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/dayjs/1.11.10/plugin/relativeTime.min.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --green:   #25D366;
+      --green-d: #128C7E;
+      --bg:      #F0F2F5;
+      --sidebar: #FFFFFF;
+      --chat-bg: #E5DDD5;
+      --bubble-in:  #FFFFFF;
+      --bubble-out: #DCF8C6;
+      --bubble-ai:  #E3F2FD;
+      --bubble-sug: #FFF9C4;
+      --text:    #111827;
+      --muted:   #6B7280;
+      --border:  #E5E7EB;
+      --accent:  #25D366;
+    }
+
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); height: 100vh; display: flex; overflow: hidden; }
+
+    /* ── Left Sidebar ───────────────────────── */
+    #sidebar {
+      width: 360px; min-width: 300px; max-width: 400px;
+      background: var(--sidebar); border-right: 1px solid var(--border);
+      display: flex; flex-direction: column; height: 100vh;
+    }
+
+    #sidebar-header {
+      background: var(--green-d); color: #fff;
+      padding: 12px 16px; display: flex; align-items: center; gap: 10px;
+    }
+    #sidebar-header h1 { font-size: 18px; font-weight: 600; flex: 1; }
+    #sidebar-header .avatar { width: 38px; height: 38px; border-radius: 50%; background: rgba(255,255,255,0.2); display: flex; align-items: center; justify-content: center; font-size: 18px; cursor: pointer; }
+
+    /* Business selector */
+    #biz-tabs { display: flex; border-bottom: 1px solid var(--border); background: #fff; }
+    .biz-tab {
+      flex: 1; padding: 10px 8px; text-align: center; cursor: pointer;
+      font-size: 12px; font-weight: 600; color: var(--muted);
+      border-bottom: 3px solid transparent; transition: all .15s;
+    }
+    .biz-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+    .biz-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 5px; }
+
+    /* Search */
+    #search-box { padding: 8px 12px; background: #f5f6f7; border-bottom: 1px solid var(--border); }
+    #search-box input {
+      width: 100%; padding: 8px 12px; border-radius: 20px; border: none;
+      background: #fff; font-size: 14px; outline: none;
+      box-shadow: 0 1px 3px rgba(0,0,0,.08);
+    }
+
+    /* Filter tabs */
+    #filter-tabs { display: flex; gap: 4px; padding: 8px 12px; border-bottom: 1px solid var(--border); }
+    .filter-chip {
+      padding: 4px 12px; border-radius: 20px; font-size: 12px; cursor: pointer;
+      border: 1px solid var(--border); background: #fff; color: var(--muted);
+      transition: all .15s;
+    }
+    .filter-chip.active { background: var(--green); color: #fff; border-color: var(--green); }
+
+    /* Conversation list */
+    #conv-list { flex: 1; overflow-y: auto; }
+    .conv-item {
+      display: flex; align-items: center; gap: 10px;
+      padding: 12px 16px; cursor: pointer; border-bottom: 1px solid #f0f0f0;
+      transition: background .1s; position: relative;
+    }
+    .conv-item:hover { background: #f5f6f8; }
+    .conv-item.active { background: #EDF7EE; }
+    .conv-avatar {
+      width: 46px; height: 46px; border-radius: 50%;
+      background: var(--green); color: #fff;
+      display: flex; align-items: center; justify-content: center;
+      font-weight: 700; font-size: 18px; flex-shrink: 0;
+    }
+    .conv-info { flex: 1; min-width: 0; }
+    .conv-name { font-weight: 600; font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .conv-preview { font-size: 13px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 2px; }
+    .conv-meta { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; flex-shrink: 0; }
+    .conv-time { font-size: 11px; color: var(--muted); }
+    .badge { background: var(--green); color: #fff; border-radius: 50%; width: 18px; height: 18px; font-size: 11px; display: flex; align-items: center; justify-content: center; font-weight: 700; }
+    .needs-human-dot { width: 8px; height: 8px; border-radius: 50%; background: #F59E0B; }
+    .ai-chip { font-size: 10px; background: #E3F2FD; color: #1565C0; border-radius: 10px; padding: 1px 6px; }
+    #conv-empty { text-align: center; padding: 40px 20px; color: var(--muted); font-size: 14px; }
+
+    /* ── Main Chat Area ──────────────────────── */
+    #main { flex: 1; display: flex; flex-direction: column; height: 100vh; min-width: 0; }
+
+    /* Chat header */
+    #chat-header {
+      background: #F0F2F5; border-bottom: 1px solid var(--border);
+      padding: 10px 16px; display: flex; align-items: center; gap: 12px;
+    }
+    #chat-header .chat-avatar { width: 40px; height: 40px; border-radius: 50%; background: var(--green); color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 16px; flex-shrink: 0; }
+    #chat-header .chat-info { flex: 1; min-width: 0; }
+    #chat-header .chat-name { font-weight: 600; font-size: 15px; }
+    #chat-header .chat-sub { font-size: 12px; color: var(--muted); }
+    .header-actions { display: flex; gap: 8px; }
+    .header-btn { padding: 6px 12px; border-radius: 6px; border: 1px solid var(--border); background: #fff; cursor: pointer; font-size: 13px; color: var(--text); display: flex; align-items: center; gap: 4px; transition: all .15s; }
+    .header-btn:hover { background: #f0f2f5; }
+    .header-btn.danger { color: #DC2626; border-color: #FCA5A5; }
+    .header-btn.success { color: #059669; border-color: #6EE7B7; }
+
+    /* Tabs for main panel */
+    #main-tabs { display: flex; background: #fff; border-bottom: 1px solid var(--border); }
+    .main-tab { padding: 12px 24px; cursor: pointer; font-size: 14px; font-weight: 500; color: var(--muted); border-bottom: 2px solid transparent; transition: all .15s; }
+    .main-tab.active { color: var(--green-d); border-bottom-color: var(--green-d); }
+
+    /* ── Inbox panel ─── */
+    #panel-inbox { display: flex; flex-direction: column; flex: 1; height: 0; }
+
+    /* No conversation selected */
+    #no-conv { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; color: var(--muted); gap: 12px; }
+    #no-conv .icon { font-size: 64px; opacity: .3; }
+
+    /* Messages area */
+    #messages-wrap { flex: 1; overflow-y: auto; padding: 16px; background: var(--chat-bg); background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23000000' fill-opacity='0.03'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E"); }
+    .msg-day-label { text-align: center; margin: 12px 0; }
+    .msg-day-label span { background: rgba(255,255,255,.7); padding: 3px 10px; border-radius: 10px; font-size: 12px; color: var(--muted); }
+
+    .bubble-wrap { display: flex; margin: 4px 0; }
+    .bubble-wrap.inbound { justify-content: flex-start; }
+    .bubble-wrap.outbound { justify-content: flex-end; }
+    .bubble {
+      max-width: 65%; padding: 8px 12px; border-radius: 8px;
+      font-size: 14px; line-height: 1.5; position: relative;
+      box-shadow: 0 1px 2px rgba(0,0,0,.1);
+    }
+    .bubble.inbound { background: var(--bubble-in); border-top-left-radius: 2px; }
+    .bubble.outbound { background: var(--bubble-out); border-top-right-radius: 2px; }
+    .bubble.ai { background: var(--bubble-ai); }
+    .bubble.suggestion {
+      background: var(--bubble-sug); border: 1.5px dashed #F59E0B;
+      border-top-right-radius: 2px;
+    }
+    .bubble-meta { font-size: 11px; color: var(--muted); margin-top: 4px; display: flex; align-items: center; gap: 4px; justify-content: flex-end; }
+    .bubble-label { font-size: 10px; font-weight: 700; margin-bottom: 3px; }
+    .bubble-label.ai { color: #1565C0; }
+    .bubble-label.suggestion { color: #B45309; }
+    .bubble-label.agent { color: #059669; }
+    .suggestion-actions { display: flex; gap: 6px; margin-top: 8px; }
+    .sug-btn { padding: 4px 10px; border-radius: 6px; border: none; cursor: pointer; font-size: 12px; font-weight: 600; transition: all .15s; }
+    .sug-btn.approve { background: #059669; color: #fff; }
+    .sug-btn.approve:hover { background: #047857; }
+    .sug-btn.edit { background: #fff; color: var(--text); border: 1px solid var(--border); }
+    .sug-btn.discard { background: #FEE2E2; color: #DC2626; }
+
+    /* Reply box */
+    #reply-box { padding: 12px; background: #F0F2F5; border-top: 1px solid var(--border); }
+    #reply-inner { background: #fff; border-radius: 24px; display: flex; align-items: flex-end; gap: 8px; padding: 8px 12px; box-shadow: 0 1px 3px rgba(0,0,0,.08); }
+    #reply-textarea { flex: 1; border: none; outline: none; resize: none; font-size: 15px; font-family: inherit; max-height: 120px; line-height: 1.5; background: transparent; }
+    #reply-actions { display: flex; gap: 6px; align-items: center; }
+    .reply-btn { width: 36px; height: 36px; border-radius: 50%; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 16px; transition: all .15s; }
+    .reply-btn.send { background: var(--green); color: #fff; }
+    .reply-btn.send:hover { background: var(--green-d); }
+    .reply-btn.ai-sug { background: #E3F2FD; color: #1565C0; font-size: 14px; }
+    .reply-btn.ai-sug:hover { background: #BBDEFB; }
+    #reply-hint { font-size: 11px; color: var(--muted); margin-top: 6px; text-align: center; }
+    #ai-status { font-size: 12px; padding: 4px 10px; border-radius: 12px; display: inline-flex; align-items: center; gap: 4px; }
+    #ai-status.on { background: #DCFCE7; color: #166534; }
+    #ai-status.off { background: #FEE2E2; color: #991B1B; }
+
+    /* ── Broadcasts panel ─── */
+    #panel-broadcast { display: none; flex-direction: column; flex: 1; height: 0; overflow-y: auto; padding: 24px; gap: 24px; }
+
+    .card { background: #fff; border-radius: 12px; padding: 20px; box-shadow: 0 1px 3px rgba(0,0,0,.08); }
+    .card h3 { font-size: 16px; font-weight: 700; margin-bottom: 16px; color: var(--text); }
+
+    .form-row { margin-bottom: 14px; }
+    .form-row label { display: block; font-size: 13px; font-weight: 600; color: var(--muted); margin-bottom: 6px; }
+    .form-row input, .form-row textarea, .form-row select {
+      width: 100%; padding: 10px 14px; border-radius: 8px; border: 1px solid var(--border);
+      font-size: 14px; font-family: inherit; outline: none; transition: border-color .15s;
+    }
+    .form-row input:focus, .form-row textarea:focus, .form-row select:focus { border-color: var(--green); }
+    .form-row textarea { resize: vertical; min-height: 80px; }
+    .char-count { font-size: 11px; color: var(--muted); text-align: right; margin-top: 2px; }
+
+    .btn-primary { background: var(--green); color: #fff; border: none; border-radius: 8px; padding: 10px 20px; font-size: 14px; font-weight: 600; cursor: pointer; transition: background .15s; }
+    .btn-primary:hover { background: var(--green-d); }
+    .btn-primary:disabled { background: #9CA3AF; cursor: default; }
+
+    .broadcast-history-item { padding: 12px; border: 1px solid var(--border); border-radius: 8px; margin-bottom: 10px; }
+    .broadcast-history-item .bc-name { font-weight: 600; font-size: 14px; }
+    .bc-meta { font-size: 12px; color: var(--muted); margin-top: 4px; display: flex; gap: 12px; flex-wrap: wrap; }
+    .bc-status { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: 700; }
+    .bc-status.sent { background: #DCFCE7; color: #166534; }
+    .bc-status.draft { background: #F3F4F6; color: #6B7280; }
+    .bc-status.sending { background: #FEF9C3; color: #854D0E; }
+    .bc-status.failed { background: #FEE2E2; color: #991B1B; }
+
+    /* ── Settings panel ─── */
+    #panel-settings { display: none; flex-direction: column; flex: 1; overflow-y: auto; padding: 24px; gap: 24px; }
+
+    .setting-group { margin-bottom: 20px; }
+    .setting-label { font-size: 13px; font-weight: 600; color: var(--muted); margin-bottom: 6px; }
+    .toggle { display: flex; align-items: center; gap: 10px; }
+    .toggle-switch { position: relative; width: 44px; height: 24px; }
+    .toggle-switch input { opacity: 0; width: 0; height: 0; }
+    .toggle-slider { position: absolute; inset: 0; background: #ccc; border-radius: 12px; cursor: pointer; transition: background .2s; }
+    .toggle-slider::before { content: ''; position: absolute; left: 3px; bottom: 3px; width: 18px; height: 18px; background: #fff; border-radius: 50%; transition: transform .2s; }
+    .toggle-switch input:checked + .toggle-slider { background: var(--green); }
+    .toggle-switch input:checked + .toggle-slider::before { transform: translateX(20px); }
+
+    /* Loading */
+    .spinner { display: inline-block; width: 16px; height: 16px; border: 2px solid rgba(0,0,0,.1); border-top-color: var(--green); border-radius: 50%; animation: spin .6s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* Toast */
+    #toast { position: fixed; bottom: 24px; right: 24px; background: #1F2937; color: #fff; padding: 12px 20px; border-radius: 8px; font-size: 14px; opacity: 0; transition: opacity .3s; pointer-events: none; z-index: 9999; }
+    #toast.show { opacity: 1; }
+  </style>
+</head>
+<body>
+
+<!-- ═══════════════ SIDEBAR ═══════════════ -->
+<div id="sidebar">
+  <div id="sidebar-header">
+    <div class="avatar">💬</div>
+    <h1>WhatsApp Agent</h1>
+    <div id="refresh-btn" style="cursor:pointer; font-size:18px;" title="Refresh">🔄</div>
+  </div>
+
+  <!-- Business tabs -->
+  <div id="biz-tabs">
+    <div class="biz-tab active" data-idx="0" id="tab-0">
+      <span class="biz-dot" style="background:#FF6B35"></span>Garment
+    </div>
+    <div class="biz-tab" data-idx="1" id="tab-1">
+      <span class="biz-dot" style="background:#4A90D9"></span>LegalAid AI
+    </div>
+  </div>
+
+  <!-- Search -->
+  <div id="search-box">
+    <input type="text" id="search-input" placeholder="🔍  Search conversations…" />
+  </div>
+
+  <!-- Filters -->
+  <div id="filter-tabs">
+    <div class="filter-chip active" data-filter="all">All</div>
+    <div class="filter-chip" data-filter="needs_human">⚠️ Needs Review</div>
+    <div class="filter-chip" data-filter="resolved">✅ Resolved</div>
+  </div>
+
+  <!-- Conversation list -->
+  <div id="conv-list">
+    <div id="conv-empty" style="display:none">
+      <div style="font-size:40px">💬</div>
+      <p>No conversations yet</p>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════ MAIN ═══════════════ -->
+<div id="main">
+  <!-- Tab navigation -->
+  <div id="main-tabs">
+    <div class="main-tab active" data-tab="inbox">📥 Inbox</div>
+    <div class="main-tab" data-tab="broadcast">📢 Broadcasts</div>
+    <div class="main-tab" data-tab="settings">⚙️ Settings</div>
+  </div>
+
+  <!-- ── INBOX PANEL ─── -->
+  <div id="panel-inbox" style="display:flex">
+
+    <!-- No conversation selected -->
+    <div id="no-conv">
+      <div class="icon">💬</div>
+      <p style="font-size:16px; font-weight:600">Select a conversation</p>
+      <p style="font-size:13px">Choose a chat from the left to start responding</p>
+    </div>
+
+    <!-- Chat area (hidden until conv selected) -->
+    <div id="chat-area" style="display:none; flex-direction:column; flex:1; height:0">
+      <div id="chat-header">
+        <div class="chat-avatar" id="chat-avatar-el">?</div>
+        <div class="chat-info">
+          <div class="chat-name" id="chat-name-el">Contact</div>
+          <div class="chat-sub" id="chat-sub-el">Loading…</div>
+        </div>
+        <div class="header-actions">
+          <div id="ai-status" class="on">🤖 AI On</div>
+          <button class="header-btn" id="toggle-ai-btn">Toggle AI</button>
+          <button class="header-btn success" id="resolve-btn">✅ Resolve</button>
+          <button class="header-btn" id="edit-name-btn">✏️ Rename</button>
+        </div>
+      </div>
+
+      <div id="messages-wrap"></div>
+
+      <div id="reply-box">
+        <div id="reply-inner">
+          <textarea id="reply-textarea" rows="1" placeholder="Type a message…"></textarea>
+          <div id="reply-actions">
+            <button class="reply-btn ai-sug" id="ai-suggest-btn" title="Get AI suggestion">🤖</button>
+            <button class="reply-btn send" id="send-btn" title="Send">➤</button>
+          </div>
+        </div>
+        <div id="reply-hint">Press <strong>Ctrl+Enter</strong> to send &nbsp;|&nbsp; 🤖 = AI draft suggestion</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── BROADCAST PANEL ─── -->
+  <div id="panel-broadcast">
+    <div class="card">
+      <h3>📢 New Broadcast Campaign</h3>
+      <div class="form-row">
+        <label>Business</label>
+        <select id="bc-biz-select">
+          <option value="">Select business…</option>
+        </select>
+      </div>
+      <div class="form-row">
+        <label>Campaign Name</label>
+        <input type="text" id="bc-name" placeholder="e.g. Summer Sale Announcement" />
+      </div>
+      <div class="form-row">
+        <label>Message</label>
+        <textarea id="bc-message" placeholder="Hi {name}, we have an exciting offer…" maxlength="1024"></textarea>
+        <div class="char-count"><span id="bc-char-count">0</span>/1024</div>
+      </div>
+      <div class="form-row">
+        <label>Recipients</label>
+        <select id="bc-recipients">
+          <option value="all">All opted-in contacts</option>
+          <option value="tag">By tag</option>
+        </select>
+      </div>
+      <div class="form-row" id="bc-tag-row" style="display:none">
+        <label>Tag</label>
+        <input type="text" id="bc-tag" placeholder="e.g. vip, premium" />
+      </div>
+      <div id="bc-preview" style="background:#F0F9F4; border:1px solid #A7F3D0; border-radius:8px; padding:12px; font-size:13px; margin-bottom:14px; display:none">
+        <strong>📋 Preview:</strong> <span id="bc-preview-text"></span>
+      </div>
+      <button class="btn-primary" id="bc-send-btn">📤 Send Campaign</button>
+      <div id="bc-result" style="margin-top:12px; font-size:13px;"></div>
+    </div>
+
+    <div class="card">
+      <h3>📜 Campaign History</h3>
+      <div id="bc-history">
+        <div style="color:var(--muted); font-size:13px; text-align:center; padding:20px">Select a business first</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── SETTINGS PANEL ─── -->
+  <div id="panel-settings">
+    <div class="card">
+      <h3>🏢 Business Configuration</h3>
+      <p style="font-size:13px; color:var(--muted); margin-bottom:16px">
+        Business details are stored in your Supabase <code>businesses</code> table. Edit them directly there or via your Supabase dashboard. Below are your current active businesses.
+      </p>
+      <div id="settings-biz-list"></div>
+    </div>
+
+    <div class="card">
+      <h3>🔑 Environment Variables</h3>
+      <p style="font-size:13px; color:var(--muted); margin-bottom:12px">Set these in your Netlify dashboard → Site Settings → Environment variables:</p>
+      <table style="width:100%; border-collapse:collapse; font-size:13px">
+        <thead>
+          <tr style="background:#F9FAFB; text-align:left">
+            <th style="padding:8px; border:1px solid var(--border)">Variable</th>
+            <th style="padding:8px; border:1px solid var(--border)">Description</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td style="padding:8px; border:1px solid var(--border); font-family:monospace">SUPABASE_URL</td><td style="padding:8px; border:1px solid var(--border)">Your Supabase project URL</td></tr>
+          <tr><td style="padding:8px; border:1px solid var(--border); font-family:monospace">SUPABASE_SERVICE_KEY</td><td style="padding:8px; border:1px solid var(--border)">Supabase service role secret key</td></tr>
+          <tr><td style="padding:8px; border:1px solid var(--border); font-family:monospace">ANTHROPIC_API_KEY</td><td style="padding:8px; border:1px solid var(--border)">Your Anthropic Claude API key</td></tr>
+          <tr><td style="padding:8px; border:1px solid var(--border); font-family:monospace">WEBHOOK_VERIFY_TOKEN</td><td style="padding:8px; border:1px solid var(--border)">Custom string you create (used in Meta webhook config)</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="card">
+      <h3>📡 Webhook Setup Checklist</h3>
+      <div style="font-size:13px; line-height:2">
+        <div>✅ Deploy this app to Netlify</div>
+        <div>✅ Set all environment variables in Netlify</div>
+        <div>✅ Go to <a href="https://developers.facebook.com" target="_blank">developers.facebook.com</a> → Your App → WhatsApp → Configuration</div>
+        <div>✅ Set Callback URL: <code id="webhook-url-display">https://YOUR-SITE.netlify.app/api/webhook</code></div>
+        <div>✅ Set Verify Token: same value as <code>WEBHOOK_VERIFY_TOKEN</code></div>
+        <div>✅ Subscribe to: <strong>messages</strong></div>
+        <div>✅ Run the Supabase schema SQL to create tables</div>
+        <div>✅ Update the businesses table with your real Phone Number IDs and access tokens</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div id="toast"></div>
+
+<script>
+dayjs.extend(dayjs_plugin_relativeTime);
+
+// ── State ─────────────────────────────────────────────────────────────────
+const state = {
+  businesses: [],
+  currentBizIdx: 0,
+  conversations: [],
+  currentConvId: null,
+  currentConv: null,
+  messages: [],
+  filter: 'all',
+  searchQ: '',
+  pollTimer: null,
+};
+
+// ── Utilities ─────────────────────────────────────────────────────────────
+function toast(msg, dur = 3000) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  setTimeout(() => el.classList.remove('show'), dur);
+}
+
+function initials(name) {
+  if (!name) return '?';
+  return name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
+}
+
+async function api(path, opts = {}) {
+  const res = await fetch(`/api/${path}`, {
+    headers: { 'Content-Type': 'application/json', ...opts.headers },
+    ...opts,
+  });
+  return res.json();
+}
+
+// ── Business handling ─────────────────────────────────────────────────────
+async function loadBusinesses() {
+  // We hardcode businesses based on what was seeded. In production, fetch from Supabase via an admin endpoint.
+  // For now, we use a workaround: hit the conversations endpoint with a dummy ID to discover businesses
+  // Actually we'll read them from the settings display based on the conversations businessId
+  // Simplest approach: expose businesses via a dedicated function
+  try {
+    const data = await api('get-businesses');
+    if (data.businesses?.length) {
+      state.businesses = data.businesses;
+      renderBizTabs();
+      populateBizSelects();
+    }
+  } catch (e) {
+    // If endpoint doesn't exist yet, use placeholders
+    state.businesses = [
+      { id: '__garment__', name: 'Garment Retail', color: '#FF6B35' },
+      { id: '__legalaid__', name: 'LegalAid AI', color: '#4A90D9' },
+    ];
+  }
+}
+
+function renderBizTabs() {
+  const container = document.getElementById('biz-tabs');
+  container.innerHTML = state.businesses.map((b, i) => `
+    <div class="biz-tab ${i === state.currentBizIdx ? 'active' : ''}" data-idx="${i}">
+      <span class="biz-dot" style="background:${b.color}"></span>${b.name}
+    </div>
+  `).join('');
+  container.querySelectorAll('.biz-tab').forEach(tab => {
+    tab.addEventListener('click', () => switchBusiness(parseInt(tab.dataset.idx)));
+  });
+}
+
+function populateBizSelects() {
+  const sel = document.getElementById('bc-biz-select');
+  sel.innerHTML = '<option value="">Select business…</option>' +
+    state.businesses.map(b => `<option value="${b.id}">${b.name}</option>`).join('');
+}
+
+function switchBusiness(idx) {
+  state.currentBizIdx = idx;
+  state.currentConvId = null;
+  state.conversations = [];
+  renderBizTabs();
+  showChatArea(false);
+  loadConversations();
+}
+
+// ── Conversations ─────────────────────────────────────────────────────────
+async function loadConversations() {
+  const biz = state.businesses[state.currentBizIdx];
+  if (!biz || biz.id.startsWith('__')) {
+    renderConvList([]);
+    return;
+  }
+
+  let url = `conversations?businessId=${biz.id}`;
+  if (state.filter === 'resolved') url += '&status=resolved';
+  else if (state.filter === 'needs_human') url += '&needsHuman=true';
+
+  try {
+    const data = await api(url);
+    state.conversations = data.conversations || [];
+    renderConvList(state.conversations);
+  } catch (e) {
+    console.error('loadConversations error:', e);
+  }
+}
+
+function renderConvList(convs) {
+  const list = document.getElementById('conv-list');
+  const empty = document.getElementById('conv-empty');
+  const q = state.searchQ.toLowerCase();
+  const filtered = q
+    ? convs.filter(c => (c.contacts?.name || c.contacts?.phone || '').toLowerCase().includes(q))
+    : convs;
+
+  if (!filtered.length) {
+    list.innerHTML = '';
+    empty.style.display = 'block';
+    return;
+  }
+  empty.style.display = 'none';
+
+  list.innerHTML = filtered.map(c => {
+    const contact = c.contacts || {};
+    const name = contact.name || contact.phone || 'Unknown';
+    const preview = c.last_message || 'No messages yet';
+    const time = c.last_message_at ? dayjs(c.last_message_at).fromNow(true) : '';
+    const biz = c.businesses || {};
+    return `
+      <div class="conv-item ${c.id === state.currentConvId ? 'active' : ''}" data-id="${c.id}">
+        <div class="conv-avatar" style="background:${biz.color || '#25D366'}">${initials(name)}</div>
+        <div class="conv-info">
+          <div class="conv-name">${name}</div>
+          <div class="conv-preview">${preview.slice(0, 60)}</div>
+        </div>
+        <div class="conv-meta">
+          <span class="conv-time">${time}</span>
+          ${c.unread_count > 0 ? `<span class="badge">${c.unread_count}</span>` : ''}
+          ${c.needs_human ? `<span class="needs-human-dot" title="Needs human review"></span>` : ''}
+          ${c.ai_enabled ? `<span class="ai-chip">AI</span>` : ''}
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  list.querySelectorAll('.conv-item').forEach(el => {
+    el.addEventListener('click', () => openConversation(el.dataset.id));
+  });
+}
+
+// ── Single conversation ───────────────────────────────────────────────────
+async function openConversation(convId) {
+  state.currentConvId = convId;
+  renderConvList(state.conversations); // re-render to highlight active
+
+  try {
+    const data = await api(`conversations?id=${convId}`);
+    state.currentConv = data.conversation;
+    state.messages = data.messages || [];
+    showChatArea(true);
+    renderChatHeader(data.conversation);
+    renderMessages(data.messages || []);
+    startPolling(convId);
+  } catch (e) {
+    toast('Failed to load conversation');
+  }
+}
+
+function showChatArea(show) {
+  document.getElementById('no-conv').style.display = show ? 'none' : 'flex';
+  document.getElementById('chat-area').style.display = show ? 'flex' : 'none';
+}
+
+function renderChatHeader(conv) {
+  const contact = conv.contacts || {};
+  const biz = conv.businesses || {};
+  const name = contact.name || contact.phone || 'Unknown';
+  document.getElementById('chat-avatar-el').textContent = initials(name);
+  document.getElementById('chat-avatar-el').style.background = biz.color || '#25D366';
+  document.getElementById('chat-name-el').textContent = name;
+  document.getElementById('chat-sub-el').textContent = `${contact.phone} · ${biz.name || ''}`;
+
+  const aiStatus = document.getElementById('ai-status');
+  aiStatus.textContent = conv.ai_enabled ? '🤖 AI On' : '🤖 AI Off';
+  aiStatus.className = `ai-status ${conv.ai_enabled ? 'on' : 'off'}`;
+}
+
+function renderMessages(msgs) {
+  const wrap = document.getElementById('messages-wrap');
+  if (!msgs.length) {
+    wrap.innerHTML = '<div style="text-align:center; padding:40px; color:var(--muted); font-size:13px">No messages yet</div>';
+    return;
+  }
+
+  let lastDate = '';
+  wrap.innerHTML = msgs.map(m => {
+    const isInbound = m.direction === 'inbound';
+    const isSuggestion = m.sender_type === 'ai_suggestion';
+    const isAI = m.sender_type === 'ai';
+    const isAgent = m.sender_type === 'agent';
+    const time = dayjs(m.timestamp).format('HH:mm');
+    const dateLabel = dayjs(m.timestamp).format('MMMM D, YYYY');
+
+    let dayDivider = '';
+    if (dateLabel !== lastDate) {
+      lastDate = dateLabel;
+      dayDivider = `<div class="msg-day-label"><span>${dateLabel}</span></div>`;
+    }
+
+    let label = '';
+    if (isSuggestion) label = `<div class="bubble-label suggestion">💡 AI Suggestion (pending review)</div>`;
+    else if (isAI) label = `<div class="bubble-label ai">🤖 AI</div>`;
+    else if (isAgent) label = `<div class="bubble-label agent">👤 Agent</div>`;
+
+    let suggestionBtns = '';
+    if (isSuggestion) {
+      suggestionBtns = `
+        <div class="suggestion-actions">
+          <button class="sug-btn approve" onclick="approveSuggestion('${m.id}', \`${encodeURIComponent(m.content)}\`)">✅ Send</button>
+          <button class="sug-btn edit" onclick="editSuggestion('${m.id}', \`${encodeURIComponent(m.content)}\`)">✏️ Edit & Send</button>
+          <button class="sug-btn discard" onclick="discardSuggestion('${m.id}')">🗑 Discard</button>
+        </div>`;
+    }
+
+    const bubbleClass = `bubble ${isInbound ? 'inbound' : 'outbound'} ${isSuggestion ? 'suggestion' : (isAI ? 'ai' : '')}`;
+
+    return `
+      ${dayDivider}
+      <div class="bubble-wrap ${isInbound ? 'inbound' : 'outbound'}">
+        <div class="${bubbleClass}">
+          ${label}
+          <div>${m.content.replace(/\n/g, '<br>')}</div>
+          ${suggestionBtns}
+          <div class="bubble-meta">
+            ${time}
+            ${!isInbound ? (m.status === 'sent' ? '✓' : m.status === 'delivered' ? '✓✓' : m.status === 'read' ? '<span style="color:#53bdeb">✓✓</span>' : '') : ''}
+          </div>
+        </div>
+      </div>`;
+  }).join('');
+
+  wrap.scrollTop = wrap.scrollHeight;
+}
+
+// ── Polling ────────────────────────────────────────────────────────────────
+function startPolling(convId) {
+  clearInterval(state.pollTimer);
+  state.pollTimer = setInterval(async () => {
+    if (!state.currentConvId) return;
+    try {
+      const data = await api(`conversations?id=${state.currentConvId}`);
+      const newCount = data.messages?.length || 0;
+      if (newCount !== state.messages.length) {
+        state.messages = data.messages || [];
+        renderMessages(state.messages);
+        renderConvList(state.conversations);
+      }
+    } catch (_) {}
+  }, 4000);
+}
+
+// ── Send message ───────────────────────────────────────────────────────────
+async function sendMessage(content, approveSuggestionId = null) {
+  if (!content.trim() || !state.currentConvId) return;
+
+  const btn = document.getElementById('send-btn');
+  btn.innerHTML = '<span class="spinner"></span>';
+  btn.disabled = true;
+
+  try {
+    const res = await api('send-message', {
+      method: 'POST',
+      body: JSON.stringify({ conversationId: state.currentConvId, content, approveSuggestionId }),
+    });
+
+    if (res.success) {
+      document.getElementById('reply-textarea').value = '';
+      await openConversation(state.currentConvId);
+      await loadConversations();
+    } else {
+      toast('❌ Failed to send: ' + (res.error || 'Unknown error'));
+    }
+  } catch (e) {
+    toast('❌ Network error');
+  } finally {
+    btn.innerHTML = '➤';
+    btn.disabled = false;
+  }
+}
+
+// ── AI Suggestion ──────────────────────────────────────────────────────────
+async function getAISuggestion() {
+  if (!state.currentConvId) return;
+  const btn = document.getElementById('ai-suggest-btn');
+  btn.innerHTML = '<span class="spinner"></span>';
+  btn.disabled = true;
+
+  try {
+    // Get last few messages as context
+    const lastMessages = state.messages.slice(-6);
+    const lastCustomer = [...lastMessages].reverse().find(m => m.direction === 'inbound');
+    if (!lastCustomer) { toast('No customer message to respond to'); return; }
+
+    // Call Claude via a lightweight inline approach using the conversations endpoint context
+    // We POST to a dedicated ai-suggest function
+    const res = await api('ai-suggest', {
+      method: 'POST',
+      body: JSON.stringify({ conversationId: state.currentConvId }),
+    });
+
+    if (res.suggestion) {
+      document.getElementById('reply-textarea').value = res.suggestion;
+      document.getElementById('reply-textarea').focus();
+    } else {
+      toast('Could not get AI suggestion');
+    }
+  } catch (e) {
+    toast('❌ AI suggestion failed');
+  } finally {
+    btn.innerHTML = '🤖';
+    btn.disabled = false;
+  }
+}
+
+async function approveSuggestion(msgId, encodedContent) {
+  const content = decodeURIComponent(encodedContent);
+  await sendMessage(content, msgId);
+}
+
+function editSuggestion(msgId, encodedContent) {
+  const content = decodeURIComponent(encodedContent);
+  document.getElementById('reply-textarea').value = content;
+  document.getElementById('reply-textarea').focus();
+  // Discard the suggestion silently
+  discardSuggestion(msgId);
+}
+
+async function discardSuggestion(msgId) {
+  await api('discard-suggestion', { method: 'POST', body: JSON.stringify({ messageId: msgId }) });
+  await openConversation(state.currentConvId);
+}
+
+// ── Toggle AI ──────────────────────────────────────────────────────────────
+document.getElementById('toggle-ai-btn').addEventListener('click', async () => {
+  if (!state.currentConv) return;
+  const newVal = !state.currentConv.ai_enabled;
+  await api('conversations', {
+    method: 'PATCH',
+    body: JSON.stringify({ id: state.currentConvId, ai_enabled: newVal }),
+  });
+  state.currentConv.ai_enabled = newVal;
+  renderChatHeader(state.currentConv);
+  toast(newVal ? '🤖 AI enabled for this conversation' : '🤖 AI disabled — you have full control');
+});
+
+// ── Resolve conversation ───────────────────────────────────────────────────
+document.getElementById('resolve-btn').addEventListener('click', async () => {
+  if (!state.currentConvId) return;
+  await api('conversations', {
+    method: 'PATCH',
+    body: JSON.stringify({ id: state.currentConvId, status: 'resolved', needs_human: false }),
+  });
+  toast('✅ Conversation resolved');
+  state.currentConvId = null;
+  showChatArea(false);
+  clearInterval(state.pollTimer);
+  await loadConversations();
+});
+
+// ── Rename contact ─────────────────────────────────────────────────────────
+document.getElementById('edit-name-btn').addEventListener('click', async () => {
+  if (!state.currentConv) return;
+  const current = state.currentConv.contacts?.name || '';
+  const newName = prompt('Enter contact name:', current);
+  if (newName && newName !== current) {
+    await api('conversations', {
+      method: 'PATCH',
+      body: JSON.stringify({ id: state.currentConvId, contact_name: newName }),
+    });
+    state.currentConv.contacts.name = newName;
+    renderChatHeader(state.currentConv);
+    await loadConversations();
+    toast('✏️ Contact renamed');
+  }
+});
+
+// ── Send button & keyboard shortcut ───────────────────────────────────────
+document.getElementById('send-btn').addEventListener('click', () => {
+  sendMessage(document.getElementById('reply-textarea').value);
+});
+document.getElementById('ai-suggest-btn').addEventListener('click', getAISuggestion);
+
+document.getElementById('reply-textarea').addEventListener('keydown', e => {
+  if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+    e.preventDefault();
+    sendMessage(e.target.value);
+  }
+  // Auto-expand
+  e.target.style.height = 'auto';
+  e.target.style.height = Math.min(e.target.scrollHeight, 120) + 'px';
+});
+
+// ── Tab navigation ─────────────────────────────────────────────────────────
+document.querySelectorAll('.main-tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.main-tab').forEach(t => t.classList.remove('active'));
+    tab.classList.add('active');
+    document.getElementById('panel-inbox').style.display = 'none';
+    document.getElementById('panel-broadcast').style.display = 'none';
+    document.getElementById('panel-settings').style.display = 'none';
+    document.getElementById(`panel-${tab.dataset.tab}`).style.display = 'flex';
+    if (tab.dataset.tab === 'broadcast') loadBroadcastHistory();
+    if (tab.dataset.tab === 'settings') renderSettings();
+  });
+});
+
+// ── Filter chips ───────────────────────────────────────────────────────────
+document.querySelectorAll('.filter-chip').forEach(chip => {
+  chip.addEventListener('click', () => {
+    document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
+    chip.classList.add('active');
+    state.filter = chip.dataset.filter;
+    loadConversations();
+  });
+});
+
+// ── Search ─────────────────────────────────────────────────────────────────
+document.getElementById('search-input').addEventListener('input', e => {
+  state.searchQ = e.target.value;
+  renderConvList(state.conversations);
+});
+
+// ── Refresh ────────────────────────────────────────────────────────────────
+document.getElementById('refresh-btn').addEventListener('click', loadConversations);
+
+// ── Broadcasts ─────────────────────────────────────────────────────────────
+document.getElementById('bc-message').addEventListener('input', function() {
+  document.getElementById('bc-char-count').textContent = this.value.length;
+  const preview = document.getElementById('bc-preview');
+  if (this.value.trim()) {
+    preview.style.display = 'block';
+    document.getElementById('bc-preview-text').textContent = this.value.slice(0, 100) + (this.value.length > 100 ? '…' : '');
+  } else {
+    preview.style.display = 'none';
+  }
+});
+
+document.getElementById('bc-recipients').addEventListener('change', function() {
+  document.getElementById('bc-tag-row').style.display = this.value === 'tag' ? 'block' : 'none';
+});
+
+document.getElementById('bc-biz-select').addEventListener('change', loadBroadcastHistory);
+
+document.getElementById('bc-send-btn').addEventListener('click', async () => {
+  const bizId = document.getElementById('bc-biz-select').value;
+  const name = document.getElementById('bc-name').value.trim();
+  const message = document.getElementById('bc-message').value.trim();
+  const recipientMode = document.getElementById('bc-recipients').value;
+  const tag = document.getElementById('bc-tag').value.trim();
+
+  if (!bizId || !name || !message) {
+    toast('Please fill in business, campaign name, and message');
+    return;
+  }
+
+  const confirmMsg = `Send "${name}" to all opted-in contacts of this business?`;
+  if (!confirm(confirmMsg)) return;
+
+  const btn = document.getElementById('bc-send-btn');
+  btn.disabled = true;
+  btn.textContent = 'Sending…';
+
+  const payload = { businessId: bizId, name, message };
+  if (recipientMode === 'tag' && tag) payload.tags = [tag];
+
+  try {
+    const res = await api('broadcast', { method: 'POST', body: JSON.stringify(payload) });
+    const result = document.getElementById('bc-result');
+    if (res.success) {
+      result.innerHTML = `<span style="color:green">✅ Sent: ${res.sent} | Failed: ${res.failed} | Total: ${res.total}</span>`;
+      document.getElementById('bc-name').value = '';
+      document.getElementById('bc-message').value = '';
+      loadBroadcastHistory();
+      toast(`✅ Broadcast sent to ${res.sent} contacts!`);
+    } else {
+      result.innerHTML = `<span style="color:red">❌ ${res.error}</span>`;
+    }
+  } catch (e) {
+    document.getElementById('bc-result').innerHTML = `<span style="color:red">❌ Network error</span>`;
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '📤 Send Campaign';
+  }
+});
+
+async function loadBroadcastHistory() {
+  const bizId = document.getElementById('bc-biz-select').value;
+  const container = document.getElementById('bc-history');
+  if (!bizId) { container.innerHTML = '<div style="color:var(--muted); font-size:13px; text-align:center; padding:20px">Select a business first</div>'; return; }
+
+  try {
+    const data = await api(`broadcast?businessId=${bizId}`);
+    if (!data.broadcasts?.length) {
+      container.innerHTML = '<div style="color:var(--muted); font-size:13px; text-align:center; padding:20px">No campaigns yet</div>';
+      return;
+    }
+    container.innerHTML = data.broadcasts.map(b => `
+      <div class="broadcast-history-item">
+        <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap">
+          <span class="bc-name">${b.name}</span>
+          <span class="bc-status ${b.status}">${b.status.toUpperCase()}</span>
+        </div>
+        <div class="bc-meta">
+          <span>📅 ${dayjs(b.created_at).format('DD MMM YYYY, HH:mm')}</span>
+          <span>👥 ${b.recipient_count} recipients</span>
+          <span>✅ ${b.sent_count} sent</span>
+          ${b.failed_count > 0 ? `<span style="color:#DC2626">❌ ${b.failed_count} failed</span>` : ''}
+        </div>
+        <div style="font-size:12px; color:var(--muted); margin-top:6px; background:#f9fafb; padding:8px; border-radius:6px">${b.message.slice(0, 120)}${b.message.length > 120 ? '…' : ''}</div>
+      </div>
+    `).join('');
+  } catch (e) {
+    container.innerHTML = '<div style="color:red; font-size:13px; text-align:center; padding:20px">Failed to load history</div>';
+  }
+}
+
+// ── Settings ───────────────────────────────────────────────────────────────
+function renderSettings() {
+  const hostname = window.location.hostname;
+  document.getElementById('webhook-url-display').textContent =
+    hostname === 'localhost' ? 'https://YOUR-SITE.netlify.app/api/webhook'
+    : `https://${hostname}/api/webhook`;
+
+  const bizList = document.getElementById('settings-biz-list');
+  if (!state.businesses.length || state.businesses[0].id.startsWith('__')) {
+    bizList.innerHTML = '<p style="font-size:13px; color:var(--muted)">Businesses will appear here once your Supabase database is connected.</p>';
+    return;
+  }
+  bizList.innerHTML = state.businesses.map(b => `
+    <div style="border:1px solid var(--border); border-radius:8px; padding:14px; margin-bottom:12px">
+      <div style="display:flex; align-items:center; gap:10px; margin-bottom:8px">
+        <div style="width:16px; height:16px; border-radius:50%; background:${b.color}"></div>
+        <strong>${b.name}</strong>
+      </div>
+      <div style="font-size:12px; color:var(--muted)">Phone Number ID: <code>${b.phone_number_id}</code></div>
+    </div>
+  `).join('');
+}
+
+// ── Bootstrap ──────────────────────────────────────────────────────────────
+async function init() {
+  await loadBusinesses();
+  await loadConversations();
+  // Refresh conversation list every 10 seconds
+  setInterval(loadConversations, 10000);
+}
+
+init();
+</script>
+</body>
+</html>
