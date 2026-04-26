@@ -170,6 +170,12 @@
     .var-row input { flex: 1; padding: 8px 12px; border-radius: 8px; border: 1px solid var(--border); font-size: 13px; outline: none; }
     .var-row input:focus { border-color: var(--green); }
     .var-row .rm-var { background: #FEE2E2; color: #DC2626; border: none; border-radius: 6px; padding: 6px 10px; cursor: pointer; font-size: 12px; }
+    .btn-row { display: grid; grid-template-columns: auto 140px 1fr auto; align-items: center; gap: 8px; margin-bottom: 8px; }
+    .btn-row .btn-idx { font-size: 12px; font-weight: 700; color: var(--muted); white-space: nowrap; }
+    .btn-row select { padding: 8px 10px; border-radius: 8px; border: 1px solid var(--border); font-size: 12px; background: #fff; }
+    .btn-row input { padding: 8px 12px; border-radius: 8px; border: 1px solid var(--border); font-size: 13px; outline: none; }
+    .btn-row input:focus { border-color: var(--green); }
+    .btn-row .rm-btn { background: #FEE2E2; color: #DC2626; border: none; border-radius: 6px; padding: 6px 10px; cursor: pointer; font-size: 12px; }
     .info-box { background: #EFF6FF; border: 1px solid #BFDBFE; border-radius: 8px; padding: 12px 14px; font-size: 13px; color: #1D4ED8; margin-bottom: 14px; line-height: 1.5; }
     .warn-box { background: #FFFBEB; border: 1px solid #FCD34D; border-radius: 8px; padding: 12px 14px; font-size: 13px; color: #92400E; margin-bottom: 14px; line-height: 1.5; }
     .bc-preview-box { background: #F0F9F4; border: 1px solid #A7F3D0; border-radius: 8px; padding: 12px; font-size: 13px; margin-bottom: 14px; }
@@ -212,12 +218,11 @@
     <div class="filter-chip" data-filter="needs_human">⚠️ Review</div>
     <div class="filter-chip" data-filter="resolved">✅ Resolved</div>
   </div>
-  <div id="conv-list">
-    <div id="conv-empty" style="display:none">
-      <div style="font-size:40px;text-align:center;padding-top:40px">💬</div>
-      <p style="text-align:center;color:var(--muted);padding:12px">No conversations yet</p>
-    </div>
+  <div id="conv-empty" style="display:none">
+    <div style="font-size:40px;text-align:center;padding-top:40px">💬</div>
+    <p style="text-align:center;color:var(--muted);padding:12px">No conversations yet</p>
   </div>
+  <div id="conv-list"></div>
 </div>
 
 <!-- ═══ MAIN ═══ -->
@@ -380,8 +385,9 @@
       <div id="bc-text-fields">
         <div class="form-row">
           <label>Message <span style="font-weight:400;color:var(--muted)">— use {name} or {first_name} to personalise</span></label>
-          <textarea id="bc-message" maxlength="1024" placeholder="Hi {first_name}, we have an exciting offer just for you…"></textarea>
+          <textarea id="bc-message" maxlength="1024" placeholder="Hi {first_name}, we have an exciting offer just for you…&#10;&#10;Shop now 👉 https://yourstore.com&#10;Call us: +91 98765 43210"></textarea>
           <div class="char-count"><span id="bc-char-count">0</span>/1024</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:4px">💡 URLs and phone numbers auto-link in WhatsApp. Only works within the 24-hour messaging window.</div>
         </div>
       </div>
 
@@ -402,6 +408,20 @@
           <label>Body Variables <span style="font-weight:400;color:var(--muted)">— maps to {{1}}, {{2}}, … in your template. Use {name} or {first_name} for personalisation.</span></label>
           <div id="bc-vars-list"></div>
           <button type="button" class="btn-secondary" id="bc-add-var-btn" style="margin-top:8px;font-size:12px">+ Add Variable</button>
+        </div>
+
+        <!-- Button Parameters -->
+        <div class="form-row">
+          <label>Button Parameters <span style="font-weight:400;color:var(--muted)">— only needed when your template has <strong>dynamic</strong> buttons (e.g. a personalised URL or coupon). Static buttons (fixed URL, fixed phone) need nothing here.</span></label>
+          <div class="info-box" style="font-size:12px;margin-bottom:8px">
+            <strong>Button types:</strong><br>
+            🔗 <strong>URL suffix</strong> — personalised link e.g. <code>/order/{phone}</code> (appended to the URL in your template)<br>
+            💬 <strong>Quick Reply payload</strong> — data sent back when customer taps the button<br>
+            🏷️ <strong>Coupon Code</strong> — copyable promo code e.g. <code>SUMMER20</code><br>
+            🔄 <strong>WhatsApp Flow token</strong> — flow_token for the Flow button in your template
+          </div>
+          <div id="bc-btns-list"></div>
+          <button type="button" class="btn-secondary" id="bc-add-btn-btn" style="margin-top:8px;font-size:12px">+ Add Button Parameter</button>
         </div>
       </div>
 
@@ -593,8 +613,8 @@ function renderConvList(convs) {
   const q = state.searchQ.toLowerCase();
   const filtered = q ? convs.filter(c => (c.contacts?.name || c.contacts?.phone || '').toLowerCase().includes(q)) : convs;
 
-  if (!filtered.length) { list.innerHTML = ''; empty.style.display = 'block'; return; }
-  empty.style.display = 'none';
+  if (!filtered.length) { list.innerHTML = ''; if (empty) empty.style.display = 'block'; return; }
+  if (empty) empty.style.display = 'none';
 
   list.innerHTML = filtered.map(c => {
     const contact = c.contacts || {};
@@ -1007,6 +1027,53 @@ function renumberVars() {
   document.querySelectorAll('#bc-vars-list .var-label').forEach((el, i) => { el.textContent = `{{${i + 1}}}`; });
 }
 
+// Template button parameters
+document.getElementById('bc-add-btn-btn').addEventListener('click', () => addBtnRow());
+function addBtnRow(sub_type = 'url', value = '') {
+  const list = document.getElementById('bc-btns-list');
+  const idx = list.children.length; // 0-based button index
+  const div = document.createElement('div');
+  div.className = 'btn-row';
+  div.dataset.index = idx;
+  div.innerHTML = `
+    <span class="btn-idx">Btn ${idx}</span>
+    <select onchange="updateBtnRowPlaceholder(this)">
+      <option value="url"     ${sub_type==='url'?'selected':''}>🔗 URL suffix</option>
+      <option value="quick_reply" ${sub_type==='quick_reply'?'selected':''}>💬 Quick Reply</option>
+      <option value="copy_code"   ${sub_type==='copy_code'?'selected':''}>🏷️ Coupon Code</option>
+      <option value="flow"    ${sub_type==='flow'?'selected':''}>🔄 Flow Token</option>
+    </select>
+    <input type="text" value="${value}" placeholder="${btnPlaceholder(sub_type)}" oninput="updatePreview()" />
+    <button class="rm-btn" onclick="this.closest('.btn-row').remove();renumberBtns()">✕</button>`;
+  list.appendChild(div);
+  updatePreview();
+}
+function btnPlaceholder(type) {
+  if (type === 'url') return '/referral/{phone} or just the variable part';
+  if (type === 'quick_reply') return 'PAYLOAD_VALUE e.g. INTERESTED';
+  if (type === 'copy_code') return 'PROMO CODE e.g. SUMMER20';
+  if (type === 'flow') return 'your_flow_token';
+  return '';
+}
+function updateBtnRowPlaceholder(sel) {
+  const input = sel.closest('.btn-row').querySelector('input');
+  input.placeholder = btnPlaceholder(sel.value);
+  updatePreview();
+}
+function renumberBtns() {
+  document.querySelectorAll('#bc-btns-list .btn-row').forEach((row, i) => {
+    row.dataset.index = i;
+    row.querySelector('.btn-idx').textContent = `Btn ${i}`;
+  });
+}
+function collectButtons() {
+  return [...document.querySelectorAll('#bc-btns-list .btn-row')].map(row => ({
+    index: parseInt(row.dataset.index),
+    sub_type: row.querySelector('select').value,
+    value: row.querySelector('input').value.trim(),
+  })).filter(b => b.value);
+}
+
 // Live preview
 function updatePreview() {
   const box = document.getElementById('bc-preview-box');
@@ -1060,6 +1127,7 @@ document.getElementById('bc-send-btn').addEventListener('click', async () => {
     payload.templateName = document.getElementById('bc-template-name').value.trim();
     payload.templateLanguage = document.getElementById('bc-template-lang').value.trim() || 'en';
     payload.templateVariables = [...document.querySelectorAll('#bc-vars-list input')].map(i => i.value.trim()).filter(Boolean);
+    payload.templateButtons = collectButtons();
     payload.mediaUrl = document.getElementById('bc-media-url').value.trim();
     payload.mediaType = payload.mediaUrl ? document.getElementById('bc-media-type').value : 'none';
     if (!payload.templateName) { toast('Please enter the template name'); return; }
@@ -1087,6 +1155,7 @@ document.getElementById('bc-send-btn').addEventListener('click', async () => {
       document.getElementById('bc-media-url').value = '';
       document.getElementById('bc-media-caption').value = '';
       document.getElementById('bc-vars-list').innerHTML = '';
+      document.getElementById('bc-btns-list').innerHTML = '';
       loadBroadcastHistory();
     } else {
       result.innerHTML = `<span style="color:red">❌ ${res.error}</span>`;

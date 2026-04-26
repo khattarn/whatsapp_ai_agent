@@ -37,6 +37,7 @@ function buildPayload(campaign, contact) {
     templateName,
     templateLanguage,
     templateVariables,
+    templateButtons,
     mediaUrl,
     mediaType,
     mediaCaption,
@@ -63,6 +64,42 @@ function buildPayload(campaign, contact) {
           type: 'text',
           text: personalize(v, contact),
         })),
+      });
+    }
+
+    // Buttons: URL suffix, quick-reply payload, coupon code, or Flow token
+    // Each button must already exist in the approved Meta template.
+    // templateButtons = [{ index: 0, sub_type: 'url'|'quick_reply'|'copy_code'|'flow', value: '...' }, ...]
+    if (templateButtons?.length) {
+      templateButtons.forEach(btn => {
+        if (!btn.value) return;
+        const idx = String(btn.index ?? 0);
+
+        if (btn.sub_type === 'url') {
+          // Dynamic URL suffix — template button must use a variable at the end
+          components.push({
+            type: 'button', sub_type: 'url', index: idx,
+            parameters: [{ type: 'text', text: personalize(btn.value, contact) }],
+          });
+        } else if (btn.sub_type === 'quick_reply') {
+          // Payload sent back when customer taps this button
+          components.push({
+            type: 'button', sub_type: 'quick_reply', index: idx,
+            parameters: [{ type: 'payload', payload: personalize(btn.value, contact) }],
+          });
+        } else if (btn.sub_type === 'copy_code') {
+          // Coupon code button
+          components.push({
+            type: 'button', sub_type: 'COPY_CODE', index: idx,
+            parameters: [{ type: 'coupon_code', coupon_code: btn.value }],
+          });
+        } else if (btn.sub_type === 'flow') {
+          // WhatsApp Flow button — value = flow_token (Flow ID is in the template)
+          components.push({
+            type: 'button', sub_type: 'flow', index: idx,
+            parameters: [{ type: 'action', action: { flow_token: btn.value } }],
+          });
+        }
       });
     }
 
@@ -101,7 +138,7 @@ function buildPayload(campaign, contact) {
   // ── Text (default) ────────────────────────────────────────────────────
   return {
     type: 'text',
-    text: { preview_url: false, body: personalize(message, contact) },
+    text: { preview_url: true, body: personalize(message, contact) },
   };
 }
 
@@ -170,6 +207,7 @@ exports.handler = async (event) => {
         templateName,
         templateLanguage = 'en',
         templateVariables = [],
+        templateButtons = [],
         mediaUrl,
         mediaType = 'none',
         mediaCaption,
@@ -210,7 +248,7 @@ exports.handler = async (event) => {
         return { statusCode: 400, headers, body: JSON.stringify({ error: 'No opted-in recipients found. Import contacts and ensure opted_in is true.' }) };
       }
 
-      const campaign = { messageType, message, templateName, templateLanguage, templateVariables, mediaUrl, mediaType, mediaCaption };
+      const campaign = { messageType, message, templateName, templateLanguage, templateVariables, templateButtons, mediaUrl, mediaType, mediaCaption };
       const displayMsg = displaySummary(campaign);
 
       // Create broadcast record
