@@ -28,61 +28,28 @@
     body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); height: 100vh; display: flex; overflow: hidden; }
 
     /* ── Left Sidebar ───────────────────────── */
-    #sidebar {
-      width: 360px; min-width: 300px; max-width: 400px;
-      background: var(--sidebar); border-right: 1px solid var(--border);
-      display: flex; flex-direction: column; height: 100vh;
-    }
-
-    #sidebar-header {
-      background: var(--green-d); color: #fff;
-      padding: 12px 16px; display: flex; align-items: center; gap: 10px;
-    }
+    #sidebar { width: 360px; min-width: 300px; max-width: 400px; background: var(--sidebar); border-right: 1px solid var(--border); display: flex; flex-direction: column; height: 100vh; }
+    #sidebar-header { background: var(--green-d); color: #fff; padding: 12px 16px; display: flex; align-items: center; gap: 10px; }
     #sidebar-header h1 { font-size: 18px; font-weight: 600; flex: 1; }
     #sidebar-header .avatar { width: 38px; height: 38px; border-radius: 50%; background: rgba(255,255,255,0.2); display: flex; align-items: center; justify-content: center; font-size: 18px; cursor: pointer; }
 
-    /* Business selector */
     #biz-tabs { display: flex; border-bottom: 1px solid var(--border); background: #fff; }
-    .biz-tab {
-      flex: 1; padding: 10px 8px; text-align: center; cursor: pointer;
-      font-size: 12px; font-weight: 600; color: var(--muted);
-      border-bottom: 3px solid transparent; transition: all .15s;
-    }
+    .biz-tab { flex: 1; padding: 10px 8px; text-align: center; cursor: pointer; font-size: 12px; font-weight: 600; color: var(--muted); border-bottom: 3px solid transparent; transition: all .15s; }
     .biz-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
     .biz-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 5px; }
 
-    /* Search */
     #search-box { padding: 8px 12px; background: #f5f6f7; border-bottom: 1px solid var(--border); }
-    #search-box input {
-      width: 100%; padding: 8px 12px; border-radius: 20px; border: none;
-      background: #fff; font-size: 14px; outline: none;
-      box-shadow: 0 1px 3px rgba(0,0,0,.08);
-    }
+    #search-box input { width: 100%; padding: 8px 12px; border-radius: 20px; border: none; background: #fff; font-size: 14px; outline: none; box-shadow: 0 1px 3px rgba(0,0,0,.08); }
 
-    /* Filter tabs */
     #filter-tabs { display: flex; gap: 4px; padding: 8px 12px; border-bottom: 1px solid var(--border); }
-    .filter-chip {
-      padding: 4px 12px; border-radius: 20px; font-size: 12px; cursor: pointer;
-      border: 1px solid var(--border); background: #fff; color: var(--muted);
-      transition: all .15s;
-    }
+    .filter-chip { padding: 4px 12px; border-radius: 20px; font-size: 12px; cursor: pointer; border: 1px solid var(--border); background: #fff; color: var(--muted); transition: all .15s; }
     .filter-chip.active { background: var(--green); color: #fff; border-color: var(--green); }
 
-    /* Conversation list */
     #conv-list { flex: 1; overflow-y: auto; }
-    .conv-item {
-      display: flex; align-items: center; gap: 10px;
-      padding: 12px 16px; cursor: pointer; border-bottom: 1px solid #f0f0f0;
-      transition: background .1s; position: relative;
-    }
+    .conv-item { display: flex; align-items: center; gap: 10px; padding: 12px 16px; cursor: pointer; border-bottom: 1px solid #f0f0f0; transition: background .1s; }
     .conv-item:hover { background: #f5f6f8; }
     .conv-item.active { background: #EDF7EE; }
-    .conv-avatar {
-      width: 46px; height: 46px; border-radius: 50%;
-      background: var(--green); color: #fff;
-      display: flex; align-items: center; justify-content: center;
-      font-weight: 700; font-size: 18px; flex-shrink: 0;
-    }
+    .conv-avatar { width: 46px; height: 46px; border-radius: 50%; background: var(--green); color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 18px; flex-shrink: 0; }
     .conv-info { flex: 1; min-width: 0; }
     .conv-name { font-weight: 600; font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .conv-preview { font-size: 13px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 2px; }
@@ -93,14 +60,10 @@
     .ai-chip { font-size: 10px; background: #E3F2FD; color: #1565C0; border-radius: 10px; padding: 1px 6px; }
     #conv-empty { text-align: center; padding: 40px 20px; color: var(--muted); font-size: 14px; }
 
-    /* ── Main Chat Area ──────────────────────── */
+    /* ── Main Area ──────────────────────────── */
     #main { flex: 1; display: flex; flex-direction: column; height: 100vh; min-width: 0; }
 
-    /* Chat header */
-    #chat-header {
-      background: #F0F2F5; border-bottom: 1px solid var(--border);
-      padding: 10px 16px; display: flex; align-items: center; gap: 12px;
-    }
+    #chat-header { background: #F0F2F5; border-bottom: 1px solid var(--border); padding: 10px 16px; display: flex; align-items: center; gap: 12px; }
     #chat-header .chat-avatar { width: 40px; height: 40px; border-radius: 50%; background: var(--green); color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 16px; flex-shrink: 0; }
     #chat-header .chat-info { flex: 1; min-width: 0; }
     #chat-header .chat-name { font-weight: 600; font-size: 15px; }
@@ -108,41 +71,27 @@
     .header-actions { display: flex; gap: 8px; }
     .header-btn { padding: 6px 12px; border-radius: 6px; border: 1px solid var(--border); background: #fff; cursor: pointer; font-size: 13px; color: var(--text); display: flex; align-items: center; gap: 4px; transition: all .15s; }
     .header-btn:hover { background: #f0f2f5; }
-    .header-btn.danger { color: #DC2626; border-color: #FCA5A5; }
     .header-btn.success { color: #059669; border-color: #6EE7B7; }
 
-    /* Tabs for main panel */
     #main-tabs { display: flex; background: #fff; border-bottom: 1px solid var(--border); }
-    .main-tab { padding: 12px 24px; cursor: pointer; font-size: 14px; font-weight: 500; color: var(--muted); border-bottom: 2px solid transparent; transition: all .15s; }
+    .main-tab { padding: 12px 20px; cursor: pointer; font-size: 14px; font-weight: 500; color: var(--muted); border-bottom: 2px solid transparent; transition: all .15s; }
     .main-tab.active { color: var(--green-d); border-bottom-color: var(--green-d); }
 
-    /* ── Inbox panel ─── */
+    /* ── Inbox ─── */
     #panel-inbox { display: flex; flex-direction: column; flex: 1; height: 0; }
-
-    /* No conversation selected */
     #no-conv { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; color: var(--muted); gap: 12px; }
     #no-conv .icon { font-size: 64px; opacity: .3; }
-
-    /* Messages area */
     #messages-wrap { flex: 1; overflow-y: auto; padding: 16px; background: var(--chat-bg); background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23000000' fill-opacity='0.03'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E"); }
     .msg-day-label { text-align: center; margin: 12px 0; }
     .msg-day-label span { background: rgba(255,255,255,.7); padding: 3px 10px; border-radius: 10px; font-size: 12px; color: var(--muted); }
-
     .bubble-wrap { display: flex; margin: 4px 0; }
     .bubble-wrap.inbound { justify-content: flex-start; }
     .bubble-wrap.outbound { justify-content: flex-end; }
-    .bubble {
-      max-width: 65%; padding: 8px 12px; border-radius: 8px;
-      font-size: 14px; line-height: 1.5; position: relative;
-      box-shadow: 0 1px 2px rgba(0,0,0,.1);
-    }
+    .bubble { max-width: 65%; padding: 8px 12px; border-radius: 8px; font-size: 14px; line-height: 1.5; position: relative; box-shadow: 0 1px 2px rgba(0,0,0,.1); }
     .bubble.inbound { background: var(--bubble-in); border-top-left-radius: 2px; }
     .bubble.outbound { background: var(--bubble-out); border-top-right-radius: 2px; }
     .bubble.ai { background: var(--bubble-ai); }
-    .bubble.suggestion {
-      background: var(--bubble-sug); border: 1.5px dashed #F59E0B;
-      border-top-right-radius: 2px;
-    }
+    .bubble.suggestion { background: var(--bubble-sug); border: 1.5px dashed #F59E0B; border-top-right-radius: 2px; }
     .bubble-meta { font-size: 11px; color: var(--muted); margin-top: 4px; display: flex; align-items: center; gap: 4px; justify-content: flex-end; }
     .bubble-label { font-size: 10px; font-weight: 700; margin-bottom: 3px; }
     .bubble-label.ai { color: #1565C0; }
@@ -154,8 +103,6 @@
     .sug-btn.approve:hover { background: #047857; }
     .sug-btn.edit { background: #fff; color: var(--text); border: 1px solid var(--border); }
     .sug-btn.discard { background: #FEE2E2; color: #DC2626; }
-
-    /* Reply box */
     #reply-box { padding: 12px; background: #F0F2F5; border-top: 1px solid var(--border); }
     #reply-inner { background: #fff; border-radius: 24px; display: flex; align-items: flex-end; gap: 8px; padding: 8px 12px; box-shadow: 0 1px 3px rgba(0,0,0,.08); }
     #reply-textarea { flex: 1; border: none; outline: none; resize: none; font-size: 15px; font-family: inherit; max-height: 120px; line-height: 1.5; background: transparent; }
@@ -164,32 +111,68 @@
     .reply-btn.send { background: var(--green); color: #fff; }
     .reply-btn.send:hover { background: var(--green-d); }
     .reply-btn.ai-sug { background: #E3F2FD; color: #1565C0; font-size: 14px; }
-    .reply-btn.ai-sug:hover { background: #BBDEFB; }
     #reply-hint { font-size: 11px; color: var(--muted); margin-top: 6px; text-align: center; }
     #ai-status { font-size: 12px; padding: 4px 10px; border-radius: 12px; display: inline-flex; align-items: center; gap: 4px; }
     #ai-status.on { background: #DCFCE7; color: #166534; }
     #ai-status.off { background: #FEE2E2; color: #991B1B; }
 
-    /* ── Broadcasts panel ─── */
-    #panel-broadcast { display: none; flex-direction: column; flex: 1; height: 0; overflow-y: auto; padding: 24px; gap: 24px; }
-
+    /* ── Shared card styles ─── */
+    .panel-scroll { display: none; flex-direction: column; flex: 1; height: 0; overflow-y: auto; padding: 24px; gap: 20px; }
     .card { background: #fff; border-radius: 12px; padding: 20px; box-shadow: 0 1px 3px rgba(0,0,0,.08); }
     .card h3 { font-size: 16px; font-weight: 700; margin-bottom: 16px; color: var(--text); }
-
     .form-row { margin-bottom: 14px; }
     .form-row label { display: block; font-size: 13px; font-weight: 600; color: var(--muted); margin-bottom: 6px; }
-    .form-row input, .form-row textarea, .form-row select {
-      width: 100%; padding: 10px 14px; border-radius: 8px; border: 1px solid var(--border);
-      font-size: 14px; font-family: inherit; outline: none; transition: border-color .15s;
-    }
+    .form-row input, .form-row textarea, .form-row select { width: 100%; padding: 10px 14px; border-radius: 8px; border: 1px solid var(--border); font-size: 14px; font-family: inherit; outline: none; transition: border-color .15s; }
     .form-row input:focus, .form-row textarea:focus, .form-row select:focus { border-color: var(--green); }
     .form-row textarea { resize: vertical; min-height: 80px; }
     .char-count { font-size: 11px; color: var(--muted); text-align: right; margin-top: 2px; }
-
     .btn-primary { background: var(--green); color: #fff; border: none; border-radius: 8px; padding: 10px 20px; font-size: 14px; font-weight: 600; cursor: pointer; transition: background .15s; }
     .btn-primary:hover { background: var(--green-d); }
     .btn-primary:disabled { background: #9CA3AF; cursor: default; }
+    .btn-secondary { background: #fff; color: var(--text); border: 1px solid var(--border); border-radius: 8px; padding: 8px 16px; font-size: 13px; font-weight: 600; cursor: pointer; transition: all .15s; }
+    .btn-secondary:hover { background: #f5f6f8; }
 
+    /* ── Contacts panel ─── */
+    .drop-zone { border: 2px dashed var(--border); border-radius: 10px; padding: 32px; text-align: center; cursor: pointer; transition: all .2s; background: #fafafa; }
+    .drop-zone:hover, .drop-zone.dragover { border-color: var(--green); background: #f0fdf4; }
+    .drop-zone .dz-icon { font-size: 36px; margin-bottom: 8px; }
+    .drop-zone .dz-title { font-weight: 600; font-size: 15px; margin-bottom: 4px; }
+    .drop-zone .dz-sub { font-size: 13px; color: var(--muted); }
+    .csv-preview { overflow-x: auto; margin-top: 14px; }
+    .csv-preview table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    .csv-preview th { background: #F9FAFB; padding: 8px; border: 1px solid var(--border); text-align: left; font-weight: 600; color: var(--muted); }
+    .csv-preview td { padding: 7px 8px; border: 1px solid var(--border); max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .csv-preview tr:nth-child(even) { background: #fafafa; }
+    .import-summary { margin-top: 12px; padding: 10px 14px; border-radius: 8px; font-size: 13px; background: #EFF6FF; border: 1px solid #BFDBFE; color: #1D4ED8; }
+    .contacts-table-wrap { overflow-x: auto; }
+    .contacts-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    .contacts-table th { background: #F9FAFB; padding: 9px 10px; border: 1px solid var(--border); text-align: left; font-weight: 600; color: var(--muted); }
+    .contacts-table td { padding: 8px 10px; border: 1px solid var(--border); }
+    .contacts-table tr:hover td { background: #F9FAFB; }
+    .tag-pill { display: inline-block; background: #EDE9FE; color: #5B21B6; border-radius: 10px; padding: 1px 8px; font-size: 11px; margin: 1px; }
+    .opted-badge { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: 700; }
+    .opted-badge.yes { background: #DCFCE7; color: #166534; }
+    .opted-badge.no { background: #FEE2E2; color: #991B1B; }
+    .contacts-toolbar { display: flex; gap: 10px; align-items: center; margin-bottom: 14px; flex-wrap: wrap; }
+    .contacts-toolbar input { padding: 7px 12px; border-radius: 8px; border: 1px solid var(--border); font-size: 13px; outline: none; flex: 1; min-width: 140px; }
+    .contacts-toolbar input:focus { border-color: var(--green); }
+
+    /* ── Broadcast panel ─── */
+    .msg-type-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 4px; }
+    .msg-type-card { border: 2px solid var(--border); border-radius: 10px; padding: 12px 8px; text-align: center; cursor: pointer; transition: all .15s; }
+    .msg-type-card:hover { border-color: var(--green); background: #f0fdf4; }
+    .msg-type-card.selected { border-color: var(--green); background: #f0fdf4; }
+    .msg-type-card .mt-icon { font-size: 22px; margin-bottom: 4px; }
+    .msg-type-card .mt-label { font-size: 12px; font-weight: 700; color: var(--text); }
+    .msg-type-card .mt-note { font-size: 10px; color: var(--muted); margin-top: 2px; }
+    .var-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+    .var-row .var-label { font-size: 12px; font-weight: 700; color: var(--muted); white-space: nowrap; min-width: 32px; }
+    .var-row input { flex: 1; padding: 8px 12px; border-radius: 8px; border: 1px solid var(--border); font-size: 13px; outline: none; }
+    .var-row input:focus { border-color: var(--green); }
+    .var-row .rm-var { background: #FEE2E2; color: #DC2626; border: none; border-radius: 6px; padding: 6px 10px; cursor: pointer; font-size: 12px; }
+    .info-box { background: #EFF6FF; border: 1px solid #BFDBFE; border-radius: 8px; padding: 12px 14px; font-size: 13px; color: #1D4ED8; margin-bottom: 14px; line-height: 1.5; }
+    .warn-box { background: #FFFBEB; border: 1px solid #FCD34D; border-radius: 8px; padding: 12px 14px; font-size: 13px; color: #92400E; margin-bottom: 14px; line-height: 1.5; }
+    .bc-preview-box { background: #F0F9F4; border: 1px solid #A7F3D0; border-radius: 8px; padding: 12px; font-size: 13px; margin-bottom: 14px; }
     .broadcast-history-item { padding: 12px; border: 1px solid var(--border); border-radius: 8px; margin-bottom: 10px; }
     .broadcast-history-item .bc-name { font-weight: 600; font-size: 14px; }
     .bc-meta { font-size: 12px; color: var(--muted); margin-top: 4px; display: flex; gap: 12px; flex-wrap: wrap; }
@@ -198,91 +181,62 @@
     .bc-status.draft { background: #F3F4F6; color: #6B7280; }
     .bc-status.sending { background: #FEF9C3; color: #854D0E; }
     .bc-status.failed { background: #FEE2E2; color: #991B1B; }
+    .type-badge { display: inline-block; padding: 1px 7px; border-radius: 8px; font-size: 11px; font-weight: 700; background: #E0E7FF; color: #3730A3; margin-left: 6px; }
 
     /* ── Settings panel ─── */
-    #panel-settings { display: none; flex-direction: column; flex: 1; overflow-y: auto; padding: 24px; gap: 24px; }
-
     .setting-group { margin-bottom: 20px; }
-    .setting-label { font-size: 13px; font-weight: 600; color: var(--muted); margin-bottom: 6px; }
-    .toggle { display: flex; align-items: center; gap: 10px; }
-    .toggle-switch { position: relative; width: 44px; height: 24px; }
-    .toggle-switch input { opacity: 0; width: 0; height: 0; }
-    .toggle-slider { position: absolute; inset: 0; background: #ccc; border-radius: 12px; cursor: pointer; transition: background .2s; }
-    .toggle-slider::before { content: ''; position: absolute; left: 3px; bottom: 3px; width: 18px; height: 18px; background: #fff; border-radius: 50%; transition: transform .2s; }
-    .toggle-switch input:checked + .toggle-slider { background: var(--green); }
-    .toggle-switch input:checked + .toggle-slider::before { transform: translateX(20px); }
 
-    /* Loading */
-    .spinner { display: inline-block; width: 16px; height: 16px; border: 2px solid rgba(0,0,0,.1); border-top-color: var(--green); border-radius: 50%; animation: spin .6s linear infinite; }
+    /* ── Spinner / Toast ─── */
+    .spinner { display: inline-block; width: 14px; height: 14px; border: 2px solid rgba(255,255,255,.4); border-top-color: #fff; border-radius: 50%; animation: spin .6s linear infinite; vertical-align: middle; }
+    .spinner.dark { border-color: rgba(0,0,0,.1); border-top-color: var(--green); }
     @keyframes spin { to { transform: rotate(360deg); } }
-
-    /* Toast */
     #toast { position: fixed; bottom: 24px; right: 24px; background: #1F2937; color: #fff; padding: 12px 20px; border-radius: 8px; font-size: 14px; opacity: 0; transition: opacity .3s; pointer-events: none; z-index: 9999; }
     #toast.show { opacity: 1; }
   </style>
 </head>
 <body>
 
-<!-- ═══════════════ SIDEBAR ═══════════════ -->
+<!-- ═══ SIDEBAR ═══ -->
 <div id="sidebar">
   <div id="sidebar-header">
     <div class="avatar">💬</div>
     <h1>WhatsApp Agent</h1>
-    <div id="refresh-btn" style="cursor:pointer; font-size:18px;" title="Refresh">🔄</div>
+    <div id="refresh-btn" style="cursor:pointer;font-size:18px" title="Refresh">🔄</div>
   </div>
-
-  <!-- Business tabs -->
-  <div id="biz-tabs">
-    <div class="biz-tab active" data-idx="0" id="tab-0">
-      <span class="biz-dot" style="background:#FF6B35"></span>Garment
-    </div>
-    <div class="biz-tab" data-idx="1" id="tab-1">
-      <span class="biz-dot" style="background:#4A90D9"></span>LegalAid AI
-    </div>
-  </div>
-
-  <!-- Search -->
+  <div id="biz-tabs"></div>
   <div id="search-box">
     <input type="text" id="search-input" placeholder="🔍  Search conversations…" />
   </div>
-
-  <!-- Filters -->
   <div id="filter-tabs">
     <div class="filter-chip active" data-filter="all">All</div>
-    <div class="filter-chip" data-filter="needs_human">⚠️ Needs Review</div>
+    <div class="filter-chip" data-filter="needs_human">⚠️ Review</div>
     <div class="filter-chip" data-filter="resolved">✅ Resolved</div>
   </div>
-
-  <!-- Conversation list -->
   <div id="conv-list">
     <div id="conv-empty" style="display:none">
-      <div style="font-size:40px">💬</div>
-      <p>No conversations yet</p>
+      <div style="font-size:40px;text-align:center;padding-top:40px">💬</div>
+      <p style="text-align:center;color:var(--muted);padding:12px">No conversations yet</p>
     </div>
   </div>
 </div>
 
-<!-- ═══════════════ MAIN ═══════════════ -->
+<!-- ═══ MAIN ═══ -->
 <div id="main">
-  <!-- Tab navigation -->
   <div id="main-tabs">
     <div class="main-tab active" data-tab="inbox">📥 Inbox</div>
+    <div class="main-tab" data-tab="contacts">👥 Contacts</div>
     <div class="main-tab" data-tab="broadcast">📢 Broadcasts</div>
     <div class="main-tab" data-tab="settings">⚙️ Settings</div>
   </div>
 
-  <!-- ── INBOX PANEL ─── -->
-  <div id="panel-inbox" style="display:flex">
-
-    <!-- No conversation selected -->
+  <!-- ═══ INBOX ═══ -->
+  <div id="panel-inbox" style="display:flex;flex-direction:column;flex:1;height:0">
     <div id="no-conv">
       <div class="icon">💬</div>
-      <p style="font-size:16px; font-weight:600">Select a conversation</p>
+      <p style="font-size:16px;font-weight:600">Select a conversation</p>
       <p style="font-size:13px">Choose a chat from the left to start responding</p>
     </div>
-
-    <!-- Chat area (hidden until conv selected) -->
-    <div id="chat-area" style="display:none; flex-direction:column; flex:1; height:0">
+    <div id="chat-area" style="display:none;flex-direction:column;flex:1;height:0">
       <div id="chat-header">
         <div class="chat-avatar" id="chat-avatar-el">?</div>
         <div class="chat-info">
@@ -296,113 +250,240 @@
           <button class="header-btn" id="edit-name-btn">✏️ Rename</button>
         </div>
       </div>
-
       <div id="messages-wrap"></div>
-
       <div id="reply-box">
         <div id="reply-inner">
           <textarea id="reply-textarea" rows="1" placeholder="Type a message…"></textarea>
           <div id="reply-actions">
-            <button class="reply-btn ai-sug" id="ai-suggest-btn" title="Get AI suggestion">🤖</button>
-            <button class="reply-btn send" id="send-btn" title="Send">➤</button>
+            <button class="reply-btn ai-sug" id="ai-suggest-btn" title="AI draft">🤖</button>
+            <button class="reply-btn send" id="send-btn">➤</button>
           </div>
         </div>
-        <div id="reply-hint">Press <strong>Ctrl+Enter</strong> to send &nbsp;|&nbsp; 🤖 = AI draft suggestion</div>
+        <div id="reply-hint">Press <strong>Ctrl+Enter</strong> to send &nbsp;|&nbsp; 🤖 = AI draft</div>
       </div>
     </div>
   </div>
 
-  <!-- ── BROADCAST PANEL ─── -->
-  <div id="panel-broadcast">
+  <!-- ═══ CONTACTS ═══ -->
+  <div id="panel-contacts" class="panel-scroll">
+
+    <!-- CSV Import Card -->
     <div class="card">
-      <h3>📢 New Broadcast Campaign</h3>
+      <h3>📁 Import Contacts from CSV</h3>
+
       <div class="form-row">
         <label>Business</label>
-        <select id="bc-biz-select">
-          <option value="">Select business…</option>
-        </select>
+        <select id="ct-biz-select"></select>
       </div>
+
+      <div class="info-box">
+        <strong>CSV Format:</strong> Columns — <code>name</code>, <code>phone</code>, <code>tags</code><br>
+        Phone must be international format without + (e.g. <code>919876543210</code> for India).<br>
+        Tags are comma-separated: <code>vip,returning</code>. All imported contacts are set to <strong>opted-in</strong>.
+      </div>
+
+      <div class="drop-zone" id="drop-zone">
+        <div class="dz-icon">📂</div>
+        <div class="dz-title">Drop your CSV here or click to browse</div>
+        <div class="dz-sub">Supports .csv files up to 10,000 rows</div>
+        <input type="file" id="csv-file-input" accept=".csv" style="display:none" />
+      </div>
+
+      <div style="display:flex;gap:10px;margin-top:12px;align-items:center">
+        <button class="btn-secondary" id="csv-template-btn">⬇️ Download sample CSV</button>
+        <span id="csv-file-name" style="font-size:13px;color:var(--muted)"></span>
+      </div>
+
+      <div id="csv-preview-area" style="display:none">
+        <div class="import-summary" id="csv-summary"></div>
+        <div class="csv-preview" id="csv-preview-table"></div>
+        <div style="margin-top:14px;display:flex;gap:10px;align-items:center">
+          <button class="btn-primary" id="import-btn">📥 Import Contacts</button>
+          <button class="btn-secondary" id="csv-clear-btn">✖ Clear</button>
+          <span id="import-result" style="font-size:13px"></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Contacts List Card -->
+    <div class="card">
+      <h3>👥 Contact List</h3>
+      <div class="contacts-toolbar">
+        <select id="ct-list-biz-select" style="padding:7px 12px;border-radius:8px;border:1px solid var(--border);font-size:13px;outline:none"></select>
+        <input type="text" id="ct-search" placeholder="Search name or phone…" />
+        <input type="text" id="ct-tag-filter" placeholder="Filter by tag…" />
+        <button class="btn-secondary" id="ct-load-btn">Load</button>
+      </div>
+      <div id="ct-count" style="font-size:13px;color:var(--muted);margin-bottom:10px"></div>
+      <div class="contacts-table-wrap">
+        <table class="contacts-table" id="ct-table">
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Phone</th>
+              <th>Tags</th>
+              <th>Opted In</th>
+              <th>Last Seen</th>
+            </tr>
+          </thead>
+          <tbody id="ct-tbody">
+            <tr><td colspan="5" style="text-align:center;color:var(--muted);padding:20px">Select a business and click Load</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ BROADCASTS ═══ -->
+  <div id="panel-broadcast" class="panel-scroll">
+    <div class="card">
+      <h3>📢 New Broadcast Campaign</h3>
+
+      <div class="form-row">
+        <label>Business</label>
+        <select id="bc-biz-select"></select>
+      </div>
+
       <div class="form-row">
         <label>Campaign Name</label>
-        <input type="text" id="bc-name" placeholder="e.g. Summer Sale Announcement" />
+        <input type="text" id="bc-name" placeholder="e.g. Summer Sale — May 2026" />
       </div>
+
+      <!-- Message Type Selector -->
       <div class="form-row">
-        <label>Message</label>
-        <textarea id="bc-message" placeholder="Hi {name}, we have an exciting offer…" maxlength="1024"></textarea>
-        <div class="char-count"><span id="bc-char-count">0</span>/1024</div>
+        <label>Message Type</label>
+        <div class="msg-type-grid">
+          <div class="msg-type-card selected" data-type="text">
+            <div class="mt-icon">📝</div>
+            <div class="mt-label">Text</div>
+            <div class="mt-note">24-hr window</div>
+          </div>
+          <div class="msg-type-card" data-type="template">
+            <div class="mt-icon">📋</div>
+            <div class="mt-label">Template</div>
+            <div class="mt-note">Works anytime</div>
+          </div>
+          <div class="msg-type-card" data-type="image">
+            <div class="mt-icon">🖼️</div>
+            <div class="mt-label">Image</div>
+            <div class="mt-note">24-hr window</div>
+          </div>
+          <div class="msg-type-card" data-type="video">
+            <div class="mt-icon">🎬</div>
+            <div class="mt-label">Video</div>
+            <div class="mt-note">24-hr window</div>
+          </div>
+        </div>
       </div>
+
+      <!-- Text fields -->
+      <div id="bc-text-fields">
+        <div class="form-row">
+          <label>Message <span style="font-weight:400;color:var(--muted)">— use {name} or {first_name} to personalise</span></label>
+          <textarea id="bc-message" maxlength="1024" placeholder="Hi {first_name}, we have an exciting offer just for you…"></textarea>
+          <div class="char-count"><span id="bc-char-count">0</span>/1024</div>
+        </div>
+      </div>
+
+      <!-- Template fields -->
+      <div id="bc-template-fields" style="display:none">
+        <div class="info-box">
+          Use <strong>Meta-approved templates</strong> — these work outside the 24-hour window and are ideal for campaigns to existing customers. Create templates at Meta Business Manager → WhatsApp Manager → Message Templates.
+        </div>
+        <div class="form-row">
+          <label>Template Name <span style="font-weight:400;color:var(--muted)">(exact name from Meta, e.g. <code>hello_world</code>)</span></label>
+          <input type="text" id="bc-template-name" placeholder="e.g. summer_sale_2026" />
+        </div>
+        <div class="form-row">
+          <label>Language Code</label>
+          <input type="text" id="bc-template-lang" value="en" placeholder="en" style="max-width:120px" />
+        </div>
+        <div class="form-row">
+          <label>Body Variables <span style="font-weight:400;color:var(--muted)">— maps to {{1}}, {{2}}, … in your template. Use {name} or {first_name} for personalisation.</span></label>
+          <div id="bc-vars-list"></div>
+          <button type="button" class="btn-secondary" id="bc-add-var-btn" style="margin-top:8px;font-size:12px">+ Add Variable</button>
+        </div>
+      </div>
+
+      <!-- Media fields (for image/video direct, or template header) -->
+      <div id="bc-media-fields" style="display:none">
+        <div class="form-row">
+          <label id="bc-media-label">Media URL <span style="font-weight:400;color:var(--muted)">(publicly accessible HTTPS link)</span></label>
+          <input type="url" id="bc-media-url" placeholder="https://example.com/image.jpg" />
+          <div style="font-size:11px;color:var(--muted);margin-top:4px">Tip: Use Google Drive (set to Anyone with link), Dropbox public link, or any CDN.</div>
+        </div>
+        <div class="form-row" id="bc-media-type-row" style="display:none">
+          <label>Media Type in Template Header</label>
+          <select id="bc-media-type">
+            <option value="image">Image</option>
+            <option value="video">Video</option>
+          </select>
+        </div>
+        <div class="form-row" id="bc-caption-row">
+          <label>Caption / Description <span style="font-weight:400;color:var(--muted)">(optional, use {name} for personalisation)</span></label>
+          <input type="text" id="bc-media-caption" placeholder="Hi {first_name}, check out our latest collection! 🛍️" />
+        </div>
+      </div>
+
+      <!-- Recipients -->
       <div class="form-row">
         <label>Recipients</label>
         <select id="bc-recipients">
           <option value="all">All opted-in contacts</option>
-          <option value="tag">By tag</option>
+          <option value="tag">Filter by tag</option>
         </select>
       </div>
       <div class="form-row" id="bc-tag-row" style="display:none">
         <label>Tag</label>
-        <input type="text" id="bc-tag" placeholder="e.g. vip, premium" />
+        <input type="text" id="bc-tag" placeholder="e.g. vip" />
       </div>
-      <div id="bc-preview" style="background:#F0F9F4; border:1px solid #A7F3D0; border-radius:8px; padding:12px; font-size:13px; margin-bottom:14px; display:none">
+
+      <div id="bc-preview-box" class="bc-preview-box" style="display:none">
         <strong>📋 Preview:</strong> <span id="bc-preview-text"></span>
       </div>
+
       <button class="btn-primary" id="bc-send-btn">📤 Send Campaign</button>
-      <div id="bc-result" style="margin-top:12px; font-size:13px;"></div>
+      <div id="bc-result" style="margin-top:12px;font-size:13px"></div>
     </div>
 
     <div class="card">
       <h3>📜 Campaign History</h3>
-      <div id="bc-history">
-        <div style="color:var(--muted); font-size:13px; text-align:center; padding:20px">Select a business first</div>
+      <div class="form-row" style="margin-bottom:0">
+        <select id="bc-hist-biz-select"></select>
+      </div>
+      <div id="bc-history" style="margin-top:16px">
+        <div style="color:var(--muted);font-size:13px;text-align:center;padding:20px">Select a business above</div>
       </div>
     </div>
   </div>
 
-  <!-- ── SETTINGS PANEL ─── -->
-  <div id="panel-settings">
+  <!-- ═══ SETTINGS ═══ -->
+  <div id="panel-settings" class="panel-scroll">
     <div class="card">
       <h3>🏢 Business Configuration</h3>
-      <p style="font-size:13px; color:var(--muted); margin-bottom:16px">
-        Business details are stored in your Supabase <code>businesses</code> table. Edit them directly there or via your Supabase dashboard. Below are your current active businesses.
-      </p>
+      <p style="font-size:13px;color:var(--muted);margin-bottom:16px">Edit these directly in Supabase → Table editor → <code>businesses</code>.</p>
       <div id="settings-biz-list"></div>
     </div>
-
     <div class="card">
       <h3>🔑 Environment Variables</h3>
-      <p style="font-size:13px; color:var(--muted); margin-bottom:12px">Set these in your Netlify dashboard → Site Settings → Environment variables:</p>
-      <table style="width:100%; border-collapse:collapse; font-size:13px">
-        <thead>
-          <tr style="background:#F9FAFB; text-align:left">
-            <th style="padding:8px; border:1px solid var(--border)">Variable</th>
-            <th style="padding:8px; border:1px solid var(--border)">Description</th>
-          </tr>
-        </thead>
+      <p style="font-size:13px;color:var(--muted);margin-bottom:12px">Set in Netlify → Project Configuration → Environment variables:</p>
+      <table style="width:100%;border-collapse:collapse;font-size:13px">
+        <thead><tr style="background:#F9FAFB;text-align:left"><th style="padding:8px;border:1px solid var(--border)">Variable</th><th style="padding:8px;border:1px solid var(--border)">Description</th></tr></thead>
         <tbody>
-          <tr><td style="padding:8px; border:1px solid var(--border); font-family:monospace">SUPABASE_URL</td><td style="padding:8px; border:1px solid var(--border)">Your Supabase project URL</td></tr>
-          <tr><td style="padding:8px; border:1px solid var(--border); font-family:monospace">SUPABASE_SERVICE_KEY</td><td style="padding:8px; border:1px solid var(--border)">Supabase service role secret key</td></tr>
-          <tr><td style="padding:8px; border:1px solid var(--border); font-family:monospace">ANTHROPIC_API_KEY</td><td style="padding:8px; border:1px solid var(--border)">Your Anthropic Claude API key</td></tr>
-          <tr><td style="padding:8px; border:1px solid var(--border); font-family:monospace">WEBHOOK_VERIFY_TOKEN</td><td style="padding:8px; border:1px solid var(--border)">Custom string you create (used in Meta webhook config)</td></tr>
+          <tr><td style="padding:8px;border:1px solid var(--border);font-family:monospace">SUPABASE_URL</td><td style="padding:8px;border:1px solid var(--border)">Your Supabase project URL</td></tr>
+          <tr><td style="padding:8px;border:1px solid var(--border);font-family:monospace">SUPABASE_SERVICE_KEY</td><td style="padding:8px;border:1px solid var(--border)">Supabase service role secret key</td></tr>
+          <tr><td style="padding:8px;border:1px solid var(--border);font-family:monospace">ANTHROPIC_API_KEY</td><td style="padding:8px;border:1px solid var(--border)">Anthropic Claude API key</td></tr>
+          <tr><td style="padding:8px;border:1px solid var(--border);font-family:monospace">WEBHOOK_VERIFY_TOKEN</td><td style="padding:8px;border:1px solid var(--border)">Token used in Meta webhook config</td></tr>
         </tbody>
       </table>
     </div>
-
     <div class="card">
-      <h3>📡 Webhook Setup Checklist</h3>
-      <div style="font-size:13px; line-height:2">
-        <div>✅ Deploy this app to Netlify</div>
-        <div>✅ Set all environment variables in Netlify</div>
-        <div>✅ Go to <a href="https://developers.facebook.com" target="_blank">developers.facebook.com</a> → Your App → WhatsApp → Configuration</div>
-        <div>✅ Set Callback URL: <code id="webhook-url-display">https://YOUR-SITE.netlify.app/api/webhook</code></div>
-        <div>✅ Set Verify Token: same value as <code>WEBHOOK_VERIFY_TOKEN</code></div>
-        <div>✅ Subscribe to: <strong>messages</strong></div>
-        <div>✅ Run the Supabase schema SQL to create tables</div>
-        <div>✅ Update the businesses table with your real Phone Number IDs and access tokens</div>
-      </div>
+      <h3>📡 Webhook URL</h3>
+      <code id="webhook-url-display" style="font-size:13px;word-break:break-all;color:#1D4ED8"></code>
     </div>
   </div>
 </div>
 
-<!-- Toast -->
 <div id="toast"></div>
 
 <script>
@@ -419,21 +500,20 @@ const state = {
   filter: 'all',
   searchQ: '',
   pollTimer: null,
+  csvRows: [],
 };
 
 // ── Utilities ─────────────────────────────────────────────────────────────
-function toast(msg, dur = 3000) {
+function toast(msg, dur = 3500) {
   const el = document.getElementById('toast');
   el.textContent = msg;
   el.classList.add('show');
   setTimeout(() => el.classList.remove('show'), dur);
 }
-
 function initials(name) {
   if (!name) return '?';
   return name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
 }
-
 async function api(path, opts = {}) {
   const res = await fetch(`/api/${path}`, {
     headers: { 'Content-Type': 'application/json', ...opts.headers },
@@ -442,25 +522,22 @@ async function api(path, opts = {}) {
   return res.json();
 }
 
-// ── Business handling ─────────────────────────────────────────────────────
+// ── Businesses ─────────────────────────────────────────────────────────────
 async function loadBusinesses() {
-  // We hardcode businesses based on what was seeded. In production, fetch from Supabase via an admin endpoint.
-  // For now, we use a workaround: hit the conversations endpoint with a dummy ID to discover businesses
-  // Actually we'll read them from the settings display based on the conversations businessId
-  // Simplest approach: expose businesses via a dedicated function
   try {
     const data = await api('get-businesses');
     if (data.businesses?.length) {
       state.businesses = data.businesses;
       renderBizTabs();
-      populateBizSelects();
+      populateAllBizSelects();
     }
   } catch (e) {
-    // If endpoint doesn't exist yet, use placeholders
     state.businesses = [
       { id: '__garment__', name: 'Garment Retail', color: '#FF6B35' },
       { id: '__legalaid__', name: 'LegalAid AI', color: '#4A90D9' },
     ];
+    renderBizTabs();
+    populateAllBizSelects();
   }
 }
 
@@ -476,10 +553,13 @@ function renderBizTabs() {
   });
 }
 
-function populateBizSelects() {
-  const sel = document.getElementById('bc-biz-select');
-  sel.innerHTML = '<option value="">Select business…</option>' +
+function populateAllBizSelects() {
+  const opts = '<option value="">Select business…</option>' +
     state.businesses.map(b => `<option value="${b.id}">${b.name}</option>`).join('');
+  ['bc-biz-select', 'bc-hist-biz-select', 'ct-biz-select', 'ct-list-biz-select'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.innerHTML = opts;
+  });
 }
 
 function switchBusiness(idx) {
@@ -494,10 +574,7 @@ function switchBusiness(idx) {
 // ── Conversations ─────────────────────────────────────────────────────────
 async function loadConversations() {
   const biz = state.businesses[state.currentBizIdx];
-  if (!biz || biz.id.startsWith('__')) {
-    renderConvList([]);
-    return;
-  }
+  if (!biz || biz.id.startsWith('__')) { renderConvList([]); return; }
 
   let url = `conversations?businessId=${biz.id}`;
   if (state.filter === 'resolved') url += '&status=resolved';
@@ -507,47 +584,35 @@ async function loadConversations() {
     const data = await api(url);
     state.conversations = data.conversations || [];
     renderConvList(state.conversations);
-  } catch (e) {
-    console.error('loadConversations error:', e);
-  }
+  } catch (e) { console.error('loadConversations:', e); }
 }
 
 function renderConvList(convs) {
   const list = document.getElementById('conv-list');
   const empty = document.getElementById('conv-empty');
   const q = state.searchQ.toLowerCase();
-  const filtered = q
-    ? convs.filter(c => (c.contacts?.name || c.contacts?.phone || '').toLowerCase().includes(q))
-    : convs;
+  const filtered = q ? convs.filter(c => (c.contacts?.name || c.contacts?.phone || '').toLowerCase().includes(q)) : convs;
 
-  if (!filtered.length) {
-    list.innerHTML = '';
-    empty.style.display = 'block';
-    return;
-  }
+  if (!filtered.length) { list.innerHTML = ''; empty.style.display = 'block'; return; }
   empty.style.display = 'none';
 
   list.innerHTML = filtered.map(c => {
     const contact = c.contacts || {};
     const name = contact.name || contact.phone || 'Unknown';
-    const preview = c.last_message || 'No messages yet';
-    const time = c.last_message_at ? dayjs(c.last_message_at).fromNow(true) : '';
     const biz = c.businesses || {};
-    return `
-      <div class="conv-item ${c.id === state.currentConvId ? 'active' : ''}" data-id="${c.id}">
-        <div class="conv-avatar" style="background:${biz.color || '#25D366'}">${initials(name)}</div>
-        <div class="conv-info">
-          <div class="conv-name">${name}</div>
-          <div class="conv-preview">${preview.slice(0, 60)}</div>
-        </div>
-        <div class="conv-meta">
-          <span class="conv-time">${time}</span>
-          ${c.unread_count > 0 ? `<span class="badge">${c.unread_count}</span>` : ''}
-          ${c.needs_human ? `<span class="needs-human-dot" title="Needs human review"></span>` : ''}
-          ${c.ai_enabled ? `<span class="ai-chip">AI</span>` : ''}
-        </div>
+    return `<div class="conv-item ${c.id === state.currentConvId ? 'active' : ''}" data-id="${c.id}">
+      <div class="conv-avatar" style="background:${biz.color || '#25D366'}">${initials(name)}</div>
+      <div class="conv-info">
+        <div class="conv-name">${name}</div>
+        <div class="conv-preview">${(c.last_message || 'No messages').slice(0, 55)}</div>
       </div>
-    `;
+      <div class="conv-meta">
+        <span class="conv-time">${c.last_message_at ? dayjs(c.last_message_at).fromNow(true) : ''}</span>
+        ${c.unread_count > 0 ? `<span class="badge">${c.unread_count}</span>` : ''}
+        ${c.needs_human ? `<span class="needs-human-dot" title="Needs review"></span>` : ''}
+        ${c.ai_enabled ? `<span class="ai-chip">AI</span>` : ''}
+      </div>
+    </div>`;
   }).join('');
 
   list.querySelectorAll('.conv-item').forEach(el => {
@@ -558,8 +623,7 @@ function renderConvList(convs) {
 // ── Single conversation ───────────────────────────────────────────────────
 async function openConversation(convId) {
   state.currentConvId = convId;
-  renderConvList(state.conversations); // re-render to highlight active
-
+  renderConvList(state.conversations);
   try {
     const data = await api(`conversations?id=${convId}`);
     state.currentConv = data.conversation;
@@ -568,9 +632,7 @@ async function openConversation(convId) {
     renderChatHeader(data.conversation);
     renderMessages(data.messages || []);
     startPolling(convId);
-  } catch (e) {
-    toast('Failed to load conversation');
-  }
+  } catch (e) { toast('Failed to load conversation'); }
 }
 
 function showChatArea(show) {
@@ -586,7 +648,6 @@ function renderChatHeader(conv) {
   document.getElementById('chat-avatar-el').style.background = biz.color || '#25D366';
   document.getElementById('chat-name-el').textContent = name;
   document.getElementById('chat-sub-el').textContent = `${contact.phone} · ${biz.name || ''}`;
-
   const aiStatus = document.getElementById('ai-status');
   aiStatus.textContent = conv.ai_enabled ? '🤖 AI On' : '🤖 AI Off';
   aiStatus.className = `ai-status ${conv.ai_enabled ? 'on' : 'off'}`;
@@ -594,58 +655,34 @@ function renderChatHeader(conv) {
 
 function renderMessages(msgs) {
   const wrap = document.getElementById('messages-wrap');
-  if (!msgs.length) {
-    wrap.innerHTML = '<div style="text-align:center; padding:40px; color:var(--muted); font-size:13px">No messages yet</div>';
-    return;
-  }
+  if (!msgs.length) { wrap.innerHTML = '<div style="text-align:center;padding:40px;color:var(--muted);font-size:13px">No messages yet</div>'; return; }
 
   let lastDate = '';
   wrap.innerHTML = msgs.map(m => {
     const isInbound = m.direction === 'inbound';
-    const isSuggestion = m.sender_type === 'ai_suggestion';
+    const isSug = m.sender_type === 'ai_suggestion';
     const isAI = m.sender_type === 'ai';
     const isAgent = m.sender_type === 'agent';
     const time = dayjs(m.timestamp).format('HH:mm');
     const dateLabel = dayjs(m.timestamp).format('MMMM D, YYYY');
-
     let dayDivider = '';
-    if (dateLabel !== lastDate) {
-      lastDate = dateLabel;
-      dayDivider = `<div class="msg-day-label"><span>${dateLabel}</span></div>`;
-    }
-
+    if (dateLabel !== lastDate) { lastDate = dateLabel; dayDivider = `<div class="msg-day-label"><span>${dateLabel}</span></div>`; }
     let label = '';
-    if (isSuggestion) label = `<div class="bubble-label suggestion">💡 AI Suggestion (pending review)</div>`;
+    if (isSug) label = `<div class="bubble-label suggestion">💡 AI Suggestion (pending)</div>`;
     else if (isAI) label = `<div class="bubble-label ai">🤖 AI</div>`;
     else if (isAgent) label = `<div class="bubble-label agent">👤 Agent</div>`;
-
-    let suggestionBtns = '';
-    if (isSuggestion) {
-      suggestionBtns = `
-        <div class="suggestion-actions">
-          <button class="sug-btn approve" onclick="approveSuggestion('${m.id}', \`${encodeURIComponent(m.content)}\`)">✅ Send</button>
-          <button class="sug-btn edit" onclick="editSuggestion('${m.id}', \`${encodeURIComponent(m.content)}\`)">✏️ Edit & Send</button>
-          <button class="sug-btn discard" onclick="discardSuggestion('${m.id}')">🗑 Discard</button>
-        </div>`;
-    }
-
-    const bubbleClass = `bubble ${isInbound ? 'inbound' : 'outbound'} ${isSuggestion ? 'suggestion' : (isAI ? 'ai' : '')}`;
-
-    return `
-      ${dayDivider}
-      <div class="bubble-wrap ${isInbound ? 'inbound' : 'outbound'}">
-        <div class="${bubbleClass}">
-          ${label}
-          <div>${m.content.replace(/\n/g, '<br>')}</div>
-          ${suggestionBtns}
-          <div class="bubble-meta">
-            ${time}
-            ${!isInbound ? (m.status === 'sent' ? '✓' : m.status === 'delivered' ? '✓✓' : m.status === 'read' ? '<span style="color:#53bdeb">✓✓</span>' : '') : ''}
-          </div>
-        </div>
-      </div>`;
+    let sugBtns = '';
+    if (isSug) sugBtns = `<div class="suggestion-actions">
+      <button class="sug-btn approve" onclick="approveSuggestion('${m.id}',\`${encodeURIComponent(m.content)}\`)">✅ Send</button>
+      <button class="sug-btn edit" onclick="editSuggestion('${m.id}',\`${encodeURIComponent(m.content)}\`)">✏️ Edit</button>
+      <button class="sug-btn discard" onclick="discardSuggestion('${m.id}')">🗑 Discard</button>
+    </div>`;
+    const bubClass = `bubble ${isInbound ? 'inbound' : 'outbound'} ${isSug ? 'suggestion' : (isAI ? 'ai' : '')}`;
+    return `${dayDivider}<div class="bubble-wrap ${isInbound ? 'inbound' : 'outbound'}">
+      <div class="${bubClass}">${label}<div>${m.content.replace(/\n/g,'<br>')}</div>${sugBtns}
+        <div class="bubble-meta">${time} ${!isInbound ? (m.status==='sent'?'✓':m.status==='delivered'?'✓✓':m.status==='read'?'<span style="color:#53bdeb">✓✓</span>':'') : ''}</div>
+      </div></div>`;
   }).join('');
-
   wrap.scrollTop = wrap.scrollHeight;
 }
 
@@ -656,11 +693,9 @@ function startPolling(convId) {
     if (!state.currentConvId) return;
     try {
       const data = await api(`conversations?id=${state.currentConvId}`);
-      const newCount = data.messages?.length || 0;
-      if (newCount !== state.messages.length) {
+      if ((data.messages?.length || 0) !== state.messages.length) {
         state.messages = data.messages || [];
         renderMessages(state.messages);
-        renderConvList(state.conversations);
       }
     } catch (_) {}
   }, 4000);
@@ -669,159 +704,73 @@ function startPolling(convId) {
 // ── Send message ───────────────────────────────────────────────────────────
 async function sendMessage(content, approveSuggestionId = null) {
   if (!content.trim() || !state.currentConvId) return;
-
   const btn = document.getElementById('send-btn');
   btn.innerHTML = '<span class="spinner"></span>';
   btn.disabled = true;
-
   try {
-    const res = await api('send-message', {
-      method: 'POST',
-      body: JSON.stringify({ conversationId: state.currentConvId, content, approveSuggestionId }),
-    });
-
+    const res = await api('send-message', { method: 'POST', body: JSON.stringify({ conversationId: state.currentConvId, content, approveSuggestionId }) });
     if (res.success) {
       document.getElementById('reply-textarea').value = '';
       await openConversation(state.currentConvId);
       await loadConversations();
-    } else {
-      toast('❌ Failed to send: ' + (res.error || 'Unknown error'));
-    }
-  } catch (e) {
-    toast('❌ Network error');
-  } finally {
-    btn.innerHTML = '➤';
-    btn.disabled = false;
-  }
+    } else { toast('❌ ' + (res.error || 'Send failed')); }
+  } catch (e) { toast('❌ Network error'); }
+  finally { btn.innerHTML = '➤'; btn.disabled = false; }
 }
 
-// ── AI Suggestion ──────────────────────────────────────────────────────────
 async function getAISuggestion() {
   if (!state.currentConvId) return;
   const btn = document.getElementById('ai-suggest-btn');
-  btn.innerHTML = '<span class="spinner"></span>';
+  btn.innerHTML = '<span class="spinner dark"></span>';
   btn.disabled = true;
-
   try {
-    // Get last few messages as context
-    const lastMessages = state.messages.slice(-6);
-    const lastCustomer = [...lastMessages].reverse().find(m => m.direction === 'inbound');
-    if (!lastCustomer) { toast('No customer message to respond to'); return; }
-
-    // Call Claude via a lightweight inline approach using the conversations endpoint context
-    // We POST to a dedicated ai-suggest function
-    const res = await api('ai-suggest', {
-      method: 'POST',
-      body: JSON.stringify({ conversationId: state.currentConvId }),
-    });
-
-    if (res.suggestion) {
-      document.getElementById('reply-textarea').value = res.suggestion;
-      document.getElementById('reply-textarea').focus();
-    } else {
-      toast('Could not get AI suggestion');
-    }
-  } catch (e) {
-    toast('❌ AI suggestion failed');
-  } finally {
-    btn.innerHTML = '🤖';
-    btn.disabled = false;
-  }
+    const res = await api('ai-suggest', { method: 'POST', body: JSON.stringify({ conversationId: state.currentConvId }) });
+    if (res.suggestion) { document.getElementById('reply-textarea').value = res.suggestion; document.getElementById('reply-textarea').focus(); }
+    else toast('Could not get AI suggestion');
+  } catch (e) { toast('❌ AI suggestion failed'); }
+  finally { btn.innerHTML = '🤖'; btn.disabled = false; }
 }
 
-async function approveSuggestion(msgId, encodedContent) {
-  const content = decodeURIComponent(encodedContent);
-  await sendMessage(content, msgId);
-}
+async function approveSuggestion(msgId, enc) { await sendMessage(decodeURIComponent(enc), msgId); }
+function editSuggestion(msgId, enc) { document.getElementById('reply-textarea').value = decodeURIComponent(enc); document.getElementById('reply-textarea').focus(); discardSuggestion(msgId); }
+async function discardSuggestion(msgId) { await api('discard-suggestion', { method: 'POST', body: JSON.stringify({ messageId: msgId }) }); await openConversation(state.currentConvId); }
 
-function editSuggestion(msgId, encodedContent) {
-  const content = decodeURIComponent(encodedContent);
-  document.getElementById('reply-textarea').value = content;
-  document.getElementById('reply-textarea').focus();
-  // Discard the suggestion silently
-  discardSuggestion(msgId);
-}
-
-async function discardSuggestion(msgId) {
-  await api('discard-suggestion', { method: 'POST', body: JSON.stringify({ messageId: msgId }) });
-  await openConversation(state.currentConvId);
-}
-
-// ── Toggle AI ──────────────────────────────────────────────────────────────
+// ── Inbox controls ─────────────────────────────────────────────────────────
 document.getElementById('toggle-ai-btn').addEventListener('click', async () => {
   if (!state.currentConv) return;
   const newVal = !state.currentConv.ai_enabled;
-  await api('conversations', {
-    method: 'PATCH',
-    body: JSON.stringify({ id: state.currentConvId, ai_enabled: newVal }),
-  });
+  await api('conversations', { method: 'PATCH', body: JSON.stringify({ id: state.currentConvId, ai_enabled: newVal }) });
   state.currentConv.ai_enabled = newVal;
   renderChatHeader(state.currentConv);
-  toast(newVal ? '🤖 AI enabled for this conversation' : '🤖 AI disabled — you have full control');
+  toast(newVal ? '🤖 AI enabled' : '🤖 AI disabled');
 });
-
-// ── Resolve conversation ───────────────────────────────────────────────────
 document.getElementById('resolve-btn').addEventListener('click', async () => {
   if (!state.currentConvId) return;
-  await api('conversations', {
-    method: 'PATCH',
-    body: JSON.stringify({ id: state.currentConvId, status: 'resolved', needs_human: false }),
-  });
-  toast('✅ Conversation resolved');
+  await api('conversations', { method: 'PATCH', body: JSON.stringify({ id: state.currentConvId, status: 'resolved', needs_human: false }) });
+  toast('✅ Resolved');
   state.currentConvId = null;
   showChatArea(false);
   clearInterval(state.pollTimer);
   await loadConversations();
 });
-
-// ── Rename contact ─────────────────────────────────────────────────────────
 document.getElementById('edit-name-btn').addEventListener('click', async () => {
   if (!state.currentConv) return;
-  const current = state.currentConv.contacts?.name || '';
-  const newName = prompt('Enter contact name:', current);
-  if (newName && newName !== current) {
-    await api('conversations', {
-      method: 'PATCH',
-      body: JSON.stringify({ id: state.currentConvId, contact_name: newName }),
-    });
+  const newName = prompt('Enter contact name:', state.currentConv.contacts?.name || '');
+  if (newName) {
+    await api('conversations', { method: 'PATCH', body: JSON.stringify({ id: state.currentConvId, contact_name: newName }) });
     state.currentConv.contacts.name = newName;
     renderChatHeader(state.currentConv);
     await loadConversations();
-    toast('✏️ Contact renamed');
+    toast('✏️ Renamed');
   }
 });
-
-// ── Send button & keyboard shortcut ───────────────────────────────────────
-document.getElementById('send-btn').addEventListener('click', () => {
-  sendMessage(document.getElementById('reply-textarea').value);
-});
+document.getElementById('send-btn').addEventListener('click', () => sendMessage(document.getElementById('reply-textarea').value));
 document.getElementById('ai-suggest-btn').addEventListener('click', getAISuggestion);
-
 document.getElementById('reply-textarea').addEventListener('keydown', e => {
-  if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
-    e.preventDefault();
-    sendMessage(e.target.value);
-  }
-  // Auto-expand
+  if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); sendMessage(e.target.value); }
   e.target.style.height = 'auto';
   e.target.style.height = Math.min(e.target.scrollHeight, 120) + 'px';
 });
-
-// ── Tab navigation ─────────────────────────────────────────────────────────
-document.querySelectorAll('.main-tab').forEach(tab => {
-  tab.addEventListener('click', () => {
-    document.querySelectorAll('.main-tab').forEach(t => t.classList.remove('active'));
-    tab.classList.add('active');
-    document.getElementById('panel-inbox').style.display = 'none';
-    document.getElementById('panel-broadcast').style.display = 'none';
-    document.getElementById('panel-settings').style.display = 'none';
-    document.getElementById(`panel-${tab.dataset.tab}`).style.display = 'flex';
-    if (tab.dataset.tab === 'broadcast') loadBroadcastHistory();
-    if (tab.dataset.tab === 'settings') renderSettings();
-  });
-});
-
-// ── Filter chips ───────────────────────────────────────────────────────────
 document.querySelectorAll('.filter-chip').forEach(chip => {
   chip.addEventListener('click', () => {
     document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
@@ -830,70 +779,320 @@ document.querySelectorAll('.filter-chip').forEach(chip => {
     loadConversations();
   });
 });
-
-// ── Search ─────────────────────────────────────────────────────────────────
-document.getElementById('search-input').addEventListener('input', e => {
-  state.searchQ = e.target.value;
-  renderConvList(state.conversations);
-});
-
-// ── Refresh ────────────────────────────────────────────────────────────────
+document.getElementById('search-input').addEventListener('input', e => { state.searchQ = e.target.value; renderConvList(state.conversations); });
 document.getElementById('refresh-btn').addEventListener('click', loadConversations);
 
-// ── Broadcasts ─────────────────────────────────────────────────────────────
-document.getElementById('bc-message').addEventListener('input', function() {
-  document.getElementById('bc-char-count').textContent = this.value.length;
-  const preview = document.getElementById('bc-preview');
-  if (this.value.trim()) {
-    preview.style.display = 'block';
-    document.getElementById('bc-preview-text').textContent = this.value.slice(0, 100) + (this.value.length > 100 ? '…' : '');
-  } else {
-    preview.style.display = 'none';
-  }
+// ── Tab navigation ─────────────────────────────────────────────────────────
+document.querySelectorAll('.main-tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.main-tab').forEach(t => t.classList.remove('active'));
+    tab.classList.add('active');
+    document.getElementById('panel-inbox').style.display = 'none';
+    ['contacts','broadcast','settings'].forEach(p => {
+      document.getElementById(`panel-${p}`).style.display = 'none';
+    });
+    const id = tab.dataset.tab;
+    if (id === 'inbox') document.getElementById('panel-inbox').style.display = 'flex';
+    else document.getElementById(`panel-${id}`).style.display = 'flex';
+    if (id === 'broadcast') loadBroadcastHistory();
+    if (id === 'settings') renderSettings();
+  });
 });
 
-document.getElementById('bc-recipients').addEventListener('change', function() {
-  document.getElementById('bc-tag-row').style.display = this.value === 'tag' ? 'block' : 'none';
+// ══════════════════════════════════════════════════
+// ═══ CONTACTS TAB ════════════════════════════════
+// ══════════════════════════════════════════════════
+
+// CSV parsing
+function parseCSV(text) {
+  const lines = text.trim().split(/\r?\n/);
+  if (lines.length < 2) return { headers: [], rows: [] };
+  const parseRow = line => {
+    const result = [];
+    let cur = '', inQ = false;
+    for (let i = 0; i < line.length; i++) {
+      const c = line[i];
+      if (c === '"') { inQ = !inQ; }
+      else if (c === ',' && !inQ) { result.push(cur.trim()); cur = ''; }
+      else cur += c;
+    }
+    result.push(cur.trim());
+    return result;
+  };
+  const headers = parseRow(lines[0]).map(h => h.toLowerCase());
+  const rows = lines.slice(1).map(l => {
+    const vals = parseRow(l);
+    const obj = {};
+    headers.forEach((h, i) => obj[h] = vals[i] || '');
+    return obj;
+  }).filter(r => r.phone || r.Phone);
+  return { headers, rows };
+}
+
+function handleCSVFile(file) {
+  if (!file || !file.name.endsWith('.csv')) { toast('Please upload a .csv file'); return; }
+  document.getElementById('csv-file-name').textContent = file.name;
+  const reader = new FileReader();
+  reader.onload = e => {
+    const { headers, rows } = parseCSV(e.target.result);
+    if (!rows.length) { toast('No valid rows found in CSV'); return; }
+    state.csvRows = rows;
+    const validCount = rows.filter(r => {
+      const phone = String(r.phone || r.Phone || '').replace(/[\s\-\(\)\+\.]/g, '');
+      return /^\d{7,}$/.test(phone);
+    }).length;
+    document.getElementById('csv-summary').innerHTML =
+      `<strong>${rows.length} rows found</strong> — ${validCount} valid phone numbers, ${rows.length - validCount} will be skipped (invalid phone format)`;
+    // Preview table (first 5 rows)
+    const previewCols = ['name','phone','tags'].filter(h => headers.includes(h));
+    const thead = '<tr>' + previewCols.map(h => `<th>${h}</th>`).join('') + '</tr>';
+    const tbody = rows.slice(0, 5).map(r =>
+      '<tr>' + previewCols.map(h => `<td>${r[h] || ''}</td>`).join('') + '</tr>'
+    ).join('');
+    document.getElementById('csv-preview-table').innerHTML =
+      `<table><thead>${thead}</thead><tbody>${tbody}</tbody></table>
+       ${rows.length > 5 ? `<p style="font-size:12px;color:var(--muted);margin-top:6px">…and ${rows.length - 5} more rows</p>` : ''}`;
+    document.getElementById('csv-preview-area').style.display = 'block';
+  };
+  reader.readAsText(file);
+}
+
+// Drop zone
+const dropZone = document.getElementById('drop-zone');
+dropZone.addEventListener('click', () => document.getElementById('csv-file-input').click());
+dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('dragover'); });
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+dropZone.addEventListener('drop', e => { e.preventDefault(); dropZone.classList.remove('dragover'); handleCSVFile(e.dataTransfer.files[0]); });
+document.getElementById('csv-file-input').addEventListener('change', e => handleCSVFile(e.target.files[0]));
+
+// Sample CSV download
+document.getElementById('csv-template-btn').addEventListener('click', () => {
+  const csv = 'name,phone,tags\nJohn Doe,919876543210,vip\nJane Smith,919876543211,"premium,returning"\nRajesh Kumar,919876543212,';
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'contacts_template.csv';
+  a.click();
 });
 
-document.getElementById('bc-biz-select').addEventListener('change', loadBroadcastHistory);
+// Clear CSV
+document.getElementById('csv-clear-btn').addEventListener('click', () => {
+  state.csvRows = [];
+  document.getElementById('csv-preview-area').style.display = 'none';
+  document.getElementById('csv-file-name').textContent = '';
+  document.getElementById('csv-file-input').value = '';
+  document.getElementById('import-result').textContent = '';
+});
 
-document.getElementById('bc-send-btn').addEventListener('click', async () => {
-  const bizId = document.getElementById('bc-biz-select').value;
-  const name = document.getElementById('bc-name').value.trim();
-  const message = document.getElementById('bc-message').value.trim();
-  const recipientMode = document.getElementById('bc-recipients').value;
-  const tag = document.getElementById('bc-tag').value.trim();
+// Import button
+document.getElementById('import-btn').addEventListener('click', async () => {
+  const bizId = document.getElementById('ct-biz-select').value;
+  if (!bizId) { toast('Please select a business first'); return; }
+  if (!state.csvRows.length) { toast('No CSV data to import'); return; }
 
-  if (!bizId || !name || !message) {
-    toast('Please fill in business, campaign name, and message');
-    return;
-  }
-
-  const confirmMsg = `Send "${name}" to all opted-in contacts of this business?`;
-  if (!confirm(confirmMsg)) return;
-
-  const btn = document.getElementById('bc-send-btn');
+  const btn = document.getElementById('import-btn');
   btn.disabled = true;
-  btn.textContent = 'Sending…';
-
-  const payload = { businessId: bizId, name, message };
-  if (recipientMode === 'tag' && tag) payload.tags = [tag];
+  btn.innerHTML = '<span class="spinner"></span> Importing…';
+  const result = document.getElementById('import-result');
 
   try {
-    const res = await api('broadcast', { method: 'POST', body: JSON.stringify(payload) });
-    const result = document.getElementById('bc-result');
+    const res = await api('import-contacts', {
+      method: 'POST',
+      body: JSON.stringify({ businessId: bizId, contacts: state.csvRows }),
+    });
     if (res.success) {
-      result.innerHTML = `<span style="color:green">✅ Sent: ${res.sent} | Failed: ${res.failed} | Total: ${res.total}</span>`;
-      document.getElementById('bc-name').value = '';
-      document.getElementById('bc-message').value = '';
-      loadBroadcastHistory();
-      toast(`✅ Broadcast sent to ${res.sent} contacts!`);
+      result.innerHTML = `<span style="color:green">✅ Imported ${res.imported} contacts (${res.skipped || 0} skipped)</span>`;
+      toast(`✅ ${res.imported} contacts imported!`);
+      // Auto-refresh contact list
+      document.getElementById('ct-list-biz-select').value = bizId;
+      loadContactList();
     } else {
       result.innerHTML = `<span style="color:red">❌ ${res.error}</span>`;
     }
   } catch (e) {
-    document.getElementById('bc-result').innerHTML = `<span style="color:red">❌ Network error</span>`;
+    result.innerHTML = `<span style="color:red">❌ Network error</span>`;
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '📥 Import Contacts';
+  }
+});
+
+// Contact list
+async function loadContactList() {
+  const bizId = document.getElementById('ct-list-biz-select').value;
+  const search = document.getElementById('ct-search').value.toLowerCase();
+  const tag = document.getElementById('ct-tag-filter').value.trim();
+  if (!bizId) { toast('Select a business first'); return; }
+
+  const tbody = document.getElementById('ct-tbody');
+  tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:16px"><span class="spinner dark"></span></td></tr>';
+
+  try {
+    let url = `import-contacts?businessId=${bizId}`;
+    if (tag) url += `&tag=${encodeURIComponent(tag)}`;
+    const data = await api(url);
+    let contacts = data.contacts || [];
+    if (search) contacts = contacts.filter(c => (c.name || '').toLowerCase().includes(search) || (c.phone || '').includes(search));
+
+    document.getElementById('ct-count').textContent = `${contacts.length} contact${contacts.length !== 1 ? 's' : ''} found`;
+
+    if (!contacts.length) {
+      tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:20px">No contacts found</td></tr>';
+      return;
+    }
+    tbody.innerHTML = contacts.map(c => `<tr>
+      <td>${c.name || '—'}</td>
+      <td style="font-family:monospace">${c.phone}</td>
+      <td>${(c.tags || []).map(t => `<span class="tag-pill">${t}</span>`).join('') || '—'}</td>
+      <td><span class="opted-badge ${c.opted_in ? 'yes' : 'no'}">${c.opted_in ? '✓ Yes' : '✗ No'}</span></td>
+      <td>${c.last_seen ? dayjs(c.last_seen).fromNow() : '—'}</td>
+    </tr>`).join('');
+  } catch (e) {
+    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:red;padding:16px">Failed to load contacts</td></tr>';
+  }
+}
+
+document.getElementById('ct-load-btn').addEventListener('click', loadContactList);
+document.getElementById('ct-search').addEventListener('keydown', e => { if (e.key === 'Enter') loadContactList(); });
+
+// ══════════════════════════════════════════════════
+// ═══ BROADCAST TAB ═══════════════════════════════
+// ══════════════════════════════════════════════════
+
+let currentMsgType = 'text';
+
+document.querySelectorAll('.msg-type-card').forEach(card => {
+  card.addEventListener('click', () => {
+    document.querySelectorAll('.msg-type-card').forEach(c => c.classList.remove('selected'));
+    card.classList.add('selected');
+    currentMsgType = card.dataset.type;
+    updateBroadcastFields();
+  });
+});
+
+function updateBroadcastFields() {
+  const isText = currentMsgType === 'text';
+  const isTpl = currentMsgType === 'template';
+  const isImg = currentMsgType === 'image';
+  const isVid = currentMsgType === 'video';
+
+  document.getElementById('bc-text-fields').style.display = isText ? 'block' : 'none';
+  document.getElementById('bc-template-fields').style.display = isTpl ? 'block' : 'none';
+  document.getElementById('bc-media-fields').style.display = (isTpl || isImg || isVid) ? 'block' : 'none';
+  document.getElementById('bc-media-type-row').style.display = isTpl ? 'block' : 'none';
+  document.getElementById('bc-caption-row').style.display = (isImg || isVid) ? 'block' : 'none';
+
+  const mediaLabel = document.getElementById('bc-media-label');
+  if (isTpl) mediaLabel.innerHTML = 'Header Media URL <span style="font-weight:400;color:var(--muted)">(optional — for template image/video header)</span>';
+  else if (isImg) mediaLabel.innerHTML = 'Image URL <span style="font-weight:400;color:var(--muted)">(publicly accessible HTTPS link)</span>';
+  else if (isVid) mediaLabel.innerHTML = 'Video URL <span style="font-weight:400;color:var(--muted)">(publicly accessible HTTPS link)</span>';
+
+  updatePreview();
+}
+
+// Template variables
+document.getElementById('bc-add-var-btn').addEventListener('click', addVarRow);
+function addVarRow(value = '') {
+  const list = document.getElementById('bc-vars-list');
+  const idx = list.children.length + 1;
+  const div = document.createElement('div');
+  div.className = 'var-row';
+  div.innerHTML = `<span class="var-label">{{${idx}}}</span>
+    <input type="text" placeholder="e.g. {first_name} or static text" value="${value}" oninput="updatePreview()" />
+    <button class="rm-var" onclick="this.closest('.var-row').remove();renumberVars();updatePreview()">✕</button>`;
+  list.appendChild(div);
+  updatePreview();
+}
+function renumberVars() {
+  document.querySelectorAll('#bc-vars-list .var-label').forEach((el, i) => { el.textContent = `{{${i + 1}}}`; });
+}
+
+// Live preview
+function updatePreview() {
+  const box = document.getElementById('bc-preview-box');
+  const span = document.getElementById('bc-preview-text');
+  let preview = '';
+  if (currentMsgType === 'text') {
+    preview = document.getElementById('bc-message').value.slice(0, 120);
+  } else if (currentMsgType === 'template') {
+    const name = document.getElementById('bc-template-name').value;
+    const vars = [...document.querySelectorAll('#bc-vars-list input')].map(i => i.value).join(', ');
+    preview = name ? `Template: "${name}"${vars ? ' — Variables: ' + vars : ''}` : '';
+  } else if (currentMsgType === 'image' || currentMsgType === 'video') {
+    const url = document.getElementById('bc-media-url').value;
+    const cap = document.getElementById('bc-media-caption').value;
+    preview = url ? `${currentMsgType === 'image' ? '🖼️' : '🎬'} ${cap || url.split('/').pop() || 'media'}` : '';
+  }
+  if (preview) { box.style.display = 'block'; span.textContent = preview; }
+  else box.style.display = 'none';
+}
+
+document.getElementById('bc-message').addEventListener('input', function() {
+  document.getElementById('bc-char-count').textContent = this.value.length;
+  updatePreview();
+});
+document.getElementById('bc-template-name').addEventListener('input', updatePreview);
+document.getElementById('bc-media-url').addEventListener('input', updatePreview);
+document.getElementById('bc-media-caption').addEventListener('input', updatePreview);
+document.getElementById('bc-recipients').addEventListener('change', function() {
+  document.getElementById('bc-tag-row').style.display = this.value === 'tag' ? 'block' : 'none';
+});
+document.getElementById('bc-biz-select').addEventListener('change', () => {
+  document.getElementById('bc-hist-biz-select').value = document.getElementById('bc-biz-select').value;
+  loadBroadcastHistory();
+});
+document.getElementById('bc-hist-biz-select').addEventListener('change', loadBroadcastHistory);
+
+document.getElementById('bc-send-btn').addEventListener('click', async () => {
+  const bizId = document.getElementById('bc-biz-select').value;
+  const name = document.getElementById('bc-name').value.trim();
+  if (!bizId || !name) { toast('Please select a business and enter a campaign name'); return; }
+
+  const payload = { businessId: bizId, name, messageType: currentMsgType };
+  const recipientMode = document.getElementById('bc-recipients').value;
+  const tag = document.getElementById('bc-tag').value.trim();
+  if (recipientMode === 'tag' && tag) payload.tags = [tag];
+
+  if (currentMsgType === 'text') {
+    payload.message = document.getElementById('bc-message').value.trim();
+    if (!payload.message) { toast('Please enter a message'); return; }
+  } else if (currentMsgType === 'template') {
+    payload.templateName = document.getElementById('bc-template-name').value.trim();
+    payload.templateLanguage = document.getElementById('bc-template-lang').value.trim() || 'en';
+    payload.templateVariables = [...document.querySelectorAll('#bc-vars-list input')].map(i => i.value.trim()).filter(Boolean);
+    payload.mediaUrl = document.getElementById('bc-media-url').value.trim();
+    payload.mediaType = payload.mediaUrl ? document.getElementById('bc-media-type').value : 'none';
+    if (!payload.templateName) { toast('Please enter the template name'); return; }
+  } else if (currentMsgType === 'image' || currentMsgType === 'video') {
+    payload.mediaUrl = document.getElementById('bc-media-url').value.trim();
+    payload.mediaCaption = document.getElementById('bc-media-caption').value.trim();
+    if (!payload.mediaUrl) { toast('Please enter a media URL'); return; }
+  }
+
+  if (!confirm(`Send campaign "${name}" to all opted-in contacts?`)) return;
+
+  const btn = document.getElementById('bc-send-btn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> Sending…';
+  const result = document.getElementById('bc-result');
+
+  try {
+    const res = await api('broadcast', { method: 'POST', body: JSON.stringify(payload) });
+    if (res.success) {
+      result.innerHTML = `<span style="color:green">✅ Sent: ${res.sent} | Failed: ${res.failed} | Total: ${res.total}</span>`;
+      toast(`✅ Campaign sent to ${res.sent} contacts!`);
+      document.getElementById('bc-name').value = '';
+      document.getElementById('bc-message').value = '';
+      document.getElementById('bc-template-name').value = '';
+      document.getElementById('bc-media-url').value = '';
+      document.getElementById('bc-media-caption').value = '';
+      document.getElementById('bc-vars-list').innerHTML = '';
+      loadBroadcastHistory();
+    } else {
+      result.innerHTML = `<span style="color:red">❌ ${res.error}</span>`;
+    }
+  } catch (e) {
+    result.innerHTML = `<span style="color:red">❌ Network error</span>`;
   } finally {
     btn.disabled = false;
     btn.textContent = '📤 Send Campaign';
@@ -901,33 +1100,32 @@ document.getElementById('bc-send-btn').addEventListener('click', async () => {
 });
 
 async function loadBroadcastHistory() {
-  const bizId = document.getElementById('bc-biz-select').value;
+  const bizId = document.getElementById('bc-hist-biz-select').value || document.getElementById('bc-biz-select').value;
   const container = document.getElementById('bc-history');
-  if (!bizId) { container.innerHTML = '<div style="color:var(--muted); font-size:13px; text-align:center; padding:20px">Select a business first</div>'; return; }
+  if (!bizId) { container.innerHTML = '<div style="color:var(--muted);font-size:13px;text-align:center;padding:20px">Select a business above</div>'; return; }
 
   try {
     const data = await api(`broadcast?businessId=${bizId}`);
-    if (!data.broadcasts?.length) {
-      container.innerHTML = '<div style="color:var(--muted); font-size:13px; text-align:center; padding:20px">No campaigns yet</div>';
-      return;
-    }
+    if (!data.broadcasts?.length) { container.innerHTML = '<div style="color:var(--muted);font-size:13px;text-align:center;padding:20px">No campaigns yet</div>'; return; }
+    const typeIcon = { text:'📝', template:'📋', image:'🖼️', video:'🎬' };
     container.innerHTML = data.broadcasts.map(b => `
       <div class="broadcast-history-item">
-        <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap">
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
           <span class="bc-name">${b.name}</span>
           <span class="bc-status ${b.status}">${b.status.toUpperCase()}</span>
+          <span class="type-badge">${typeIcon[b.message_type || 'text'] || '📝'} ${(b.message_type || 'text').toUpperCase()}</span>
         </div>
         <div class="bc-meta">
           <span>📅 ${dayjs(b.created_at).format('DD MMM YYYY, HH:mm')}</span>
-          <span>👥 ${b.recipient_count} recipients</span>
-          <span>✅ ${b.sent_count} sent</span>
-          ${b.failed_count > 0 ? `<span style="color:#DC2626">❌ ${b.failed_count} failed</span>` : ''}
+          <span>👥 ${b.recipient_count || 0} recipients</span>
+          <span>✅ ${b.sent_count || 0} sent</span>
+          ${(b.failed_count || 0) > 0 ? `<span style="color:#DC2626">❌ ${b.failed_count} failed</span>` : ''}
+          ${b.template_name ? `<span>Template: <strong>${b.template_name}</strong></span>` : ''}
         </div>
-        <div style="font-size:12px; color:var(--muted); margin-top:6px; background:#f9fafb; padding:8px; border-radius:6px">${b.message.slice(0, 120)}${b.message.length > 120 ? '…' : ''}</div>
-      </div>
-    `).join('');
+        <div style="font-size:12px;color:var(--muted);margin-top:6px;background:#f9fafb;padding:8px;border-radius:6px">${(b.message || '').slice(0, 120)}</div>
+      </div>`).join('');
   } catch (e) {
-    container.innerHTML = '<div style="color:red; font-size:13px; text-align:center; padding:20px">Failed to load history</div>';
+    container.innerHTML = '<div style="color:red;font-size:13px;text-align:center;padding:20px">Failed to load history</div>';
   }
 }
 
@@ -940,25 +1138,23 @@ function renderSettings() {
 
   const bizList = document.getElementById('settings-biz-list');
   if (!state.businesses.length || state.businesses[0].id.startsWith('__')) {
-    bizList.innerHTML = '<p style="font-size:13px; color:var(--muted)">Businesses will appear here once your Supabase database is connected.</p>';
+    bizList.innerHTML = '<p style="font-size:13px;color:var(--muted)">Businesses will appear here once Supabase is connected.</p>';
     return;
   }
   bizList.innerHTML = state.businesses.map(b => `
-    <div style="border:1px solid var(--border); border-radius:8px; padding:14px; margin-bottom:12px">
-      <div style="display:flex; align-items:center; gap:10px; margin-bottom:8px">
-        <div style="width:16px; height:16px; border-radius:50%; background:${b.color}"></div>
+    <div style="border:1px solid var(--border);border-radius:8px;padding:14px;margin-bottom:12px">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+        <div style="width:16px;height:16px;border-radius:50%;background:${b.color}"></div>
         <strong>${b.name}</strong>
       </div>
-      <div style="font-size:12px; color:var(--muted)">Phone Number ID: <code>${b.phone_number_id}</code></div>
-    </div>
-  `).join('');
+      <div style="font-size:12px;color:var(--muted)">Phone Number ID: <code>${b.phone_number_id || 'not set'}</code></div>
+    </div>`).join('');
 }
 
 // ── Bootstrap ──────────────────────────────────────────────────────────────
 async function init() {
   await loadBusinesses();
   await loadConversations();
-  // Refresh conversation list every 10 seconds
   setInterval(loadConversations, 10000);
 }
 
