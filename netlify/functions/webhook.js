@@ -6,12 +6,40 @@
 
 const { createClient } = require('@supabase/supabase-js');
 const Anthropic = require('@anthropic-ai/sdk');
+const https = require('https');
+const http = require('http');
 
 const supabase = createClient(
   process.env.SUPABASE_URL,
   process.env.SUPABASE_SERVICE_KEY
 );
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+
+// ── Nyaya Saathi legal aid gateway (Beta3 whatsapp-service.js) ────────────
+const LEGAL_AID_GATEWAY = (process.env.LEGAL_AID_GATEWAY_URL || '').replace(/\/$/, '');
+const LEGAL_AID_APP_URL = (process.env.LEGAL_AID_APP_URL || 'https://www.legalaidai.in').replace(/\/$/, '');
+
+async function callGateway(action, params) {
+  if (!LEGAL_AID_GATEWAY) throw new Error('LEGAL_AID_GATEWAY_URL not set');
+  const url = new URL(`${LEGAL_AID_GATEWAY}/.netlify/functions/whatsapp-service`);
+  const payload = JSON.stringify({ action, ...params });
+  return new Promise((resolve, reject) => {
+    const mod = url.protocol === 'https:' ? https : http;
+    const req = mod.request({
+      hostname: url.hostname,
+      path: url.pathname,
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(payload), 'x-wa-secret': process.env.WHATSAPP_SERVICE_SECRET || '' },
+    }, res => {
+      let data = '';
+      res.on('data', d => { data += d; });
+      res.on('end', () => { try { resolve(JSON.parse(data)); } catch { resolve({ success: false }); } });
+    });
+    req.on('error', reject);
+    req.write(payload);
+    req.end();
+  });
+}
 
 // ── Keywords that signal the AI should auto-reply ──────────────────────────
 const SIMPLE_PATTERNS = [
@@ -125,6 +153,180 @@ async function getConversationHistory(conversationId, limit = 12) {
   return data || [];
 }
 
+// ── Legal Aid: menus ──────────────────────────────────────────────────────
+function languagePrompt() {
+  return '🌐 *Choose your language / भाषा चुनें / भाषा निवडा*\n\n1️⃣ English\n2️⃣ हिंदी (Hindi)\n3️⃣ मराठी (Marathi)\n\nReply 1, 2, or 3.';
+}
+
+function buildMenu(lang, name, userType) {
+  const greet = { en: `Hello ${name}! 👋`, hi: `नमस्ते ${name}! 👋`, mr: `नमस्कार ${name}! 👋` }[lang] || `Hello ${name}! 👋`;
+  if (userType === 'advocate') {
+    return { en: `${greet}\n\n⚖️ *Nyaya Saathi — Advocate Assistant*\n\nHow can I help you today?\n\n1️⃣ Legal Research\n2️⃣ Draft Document\n3️⃣ eCourts Case Status\n4️⃣ My Cases (App)\n5️⃣ Calendar (App)\n6️⃣ Help\n\nReply with a number.`,
+             hi: `${greet}\n\n⚖️ *न्याय साथी — अधिवक्ता सहायक*\n\nआज मैं आपकी कैसे मदद करूँ?\n\n1️⃣ कानूनी शोध\n2️⃣ दस्तावेज़ ड्राफ्ट\n3️⃣ eCourts केस स्थिति\n4️⃣ मेरे केस (ऐप)\n5️⃣ कैलेंडर (ऐप)\n6️⃣ सहायता\n\nनंबर लिखें।`,
+             mr: `${greet}\n\n⚖️ *न्याय साथी — वकील सहाय्यक*\n\nआज मी आपली कशी मदत करू?\n\n1️⃣ कायदेशीर संशोधन\n2️⃣ कागदपत्र मसुदा\n3️⃣ eCourts केस स्थिती\n4️⃣ माझे केस (अ‍ॅप)\n5️⃣ दिनदर्शिका (अ‍ॅप)\n6️⃣ मदत\n\nक्रमांक टाइप करा.` }[lang] || '';
+  }
+  return { en: `${greet}\n\n⚖️ *Nyaya Saathi — Legal Assistant*\n\nHow can I help you?\n\n1️⃣ Legal Research\n2️⃣ eCourts Case Status\n3️⃣ My Cases (App)\n4️⃣ Help\n\nReply with a number.`,
+           hi: `${greet}\n\n⚖️ *न्याय साथी — कानूनी सहायक*\n\nमैं कैसे मदद करूँ?\n\n1️⃣ कानूनी शोध\n2️⃣ eCourts केस स्थिति\n3️⃣ मेरे केस (ऐप)\n4️⃣ सहायता\n\nनंबर लिखें।`,
+           mr: `${greet}\n\n⚖️ *न्याय साथी — कायदेशीर सहाय्यक*\n\nमी कशी मदत करू?\n\n1️⃣ कायदेशीर संशोधन\n2️⃣ eCourts केस स्थिती\n3️⃣ माझे केस (अ‍ॅप)\n4️⃣ मदत\n\nक्रमांक टाइप करा.` }[lang] || '';
+}
+
+// ── Legal Aid: full session handler ──────────────────────────────────────
+async function handleLegalAid(business, _contact, conversation, text, fromPhone, phoneNumberId) {
+  const sd       = conversation.session_data || {};
+  const state    = sd.state    || 'lang_select';
+  const lang     = sd.lang     || 'en';
+  const uid      = sd.uid      || null;
+  const name     = sd.name     || 'there';
+  const userType = sd.user_type || 'citizen';
+  const appUrl   = LEGAL_AID_APP_URL + (userType === 'advocate' ? '/advocate' : '/citizen');
+  const tLow     = (text || '').trim().toLowerCase();
+
+  async function reply(msg) {
+    if (!msg) return;
+    await sendWhatsAppMessage(business.access_token, phoneNumberId, fromPhone, msg);
+    await supabase.from('messages').insert({
+      conversation_id: conversation.id, from_phone: phoneNumberId, to_phone: fromPhone,
+      content: msg, direction: 'outbound', sender_type: 'ai', status: 'sent',
+      timestamp: new Date().toISOString(),
+    });
+  }
+
+  async function setSession(patch) {
+    await supabase.from('conversations').update({ session_data: { ...sd, ...patch } }).eq('id', conversation.id);
+  }
+
+  function loc(key) {
+    const MAP = {
+      menu_back:   { en: 'Type *menu* to go back to the main menu.', hi: 'मुख्य मेनू के लिए *menu* टाइप करें।', mr: 'मुख्य मेनूसाठी *menu* टाइप करा.' },
+      unavailable: { en: '⚠️ Service temporarily unavailable. Please try again.', hi: '⚠️ सेवा अस्थायी रूप से उपलब्ध नहीं है।', mr: '⚠️ सेवा तात्पुरती अनुपलब्ध आहे.' },
+    };
+    return (MAP[key] || {})[lang] || (MAP[key] || {}).en || '';
+  }
+
+  // "menu" keyword resets from any state
+  if (['menu', 'मेनू', 'मेनु'].includes(tLow) && state !== 'lang_select') {
+    await setSession({ state: 'menu', user_type: userType });
+    await reply(buildMenu(lang, name, userType));
+    return;
+  }
+
+  // ── Verify + language selection ─────────────────────────────────────────
+  if (state === 'lang_select') {
+    const sub = await callGateway('verify-subscriber', { phone: fromPhone });
+    if (!sub.registered) {
+      await reply(`👋 Welcome to *Nyaya Saathi*!\n\nThis service is for registered users.\nPlease sign up at ${LEGAL_AID_APP_URL}/advocate\n\nAlready registered? Make sure your WhatsApp number is saved in your profile (Settings).`);
+      return;
+    }
+    if (!sub.subscribed) {
+      await reply(`Hi ${sub.name || 'there'}! 👋\n\nYour account doesn't have WhatsApp AI access.\nPlease upgrade your plan at: ${LEGAL_AID_APP_URL}`);
+      return;
+    }
+    await setSession({ uid: sub.uid, name: sub.name || 'there', user_type: sub.user_type || 'citizen' });
+    await reply(languagePrompt());
+    return;
+  }
+
+  // ── Language choice (1/2/3) ─────────────────────────────────────────────
+  if (state === 'lang_select' || (sd.uid && !sd.lang && ['1','2','3'].includes(tLow))) {
+    // handled above
+  }
+  if (sd.uid && !sd.lang) {
+    if (['1','2','3'].includes(tLow)) {
+      const chosenLang = tLow === '1' ? 'en' : tLow === '2' ? 'hi' : 'mr';
+      await setSession({ lang: chosenLang, state: 'menu' });
+      await callGateway('set-language', { uid: sd.uid, language: chosenLang });
+      await reply(buildMenu(chosenLang, sd.name || 'there', sd.user_type || 'citizen'));
+    } else {
+      await reply(languagePrompt());
+    }
+    return;
+  }
+
+  // ── Main menu ───────────────────────────────────────────────────────────
+  if (state === 'menu') {
+    if (userType === 'advocate') {
+      if (tLow === '1') {
+        await setSession({ state: 'research', user_type: userType });
+        await reply({ en: '⚖️ *Legal Research*\n\nType your legal question.\n\n' + loc('menu_back'), hi: '⚖️ *कानूनी शोध*\n\nअपना प्रश्न टाइप करें।\n\n' + loc('menu_back'), mr: '⚖️ *कायदेशीर संशोधन*\n\nआपला प्रश्न टाइप करा.\n\n' + loc('menu_back') }[lang] || '');
+      } else if (tLow === '2') {
+        await setSession({ state: 'draft', user_type: userType });
+        await reply({ en: '📝 *Draft Document*\n\nWhat type? (e.g., bail application, legal notice, vakalatnama)\n\n' + loc('menu_back'), hi: '📝 *दस्तावेज़ ड्राफ्ट*\n\nकिस प्रकार का? (जैसे: bail application, legal notice, vakalatnama)\n\n' + loc('menu_back'), mr: '📝 *कागदपत्र मसुदा*\n\nकोणत्या प्रकारचे? (उदा: bail application, legal notice)\n\n' + loc('menu_back') }[lang] || '');
+      } else if (tLow === '3') {
+        await setSession({ state: 'ecourts', user_type: userType });
+        await reply({ en: '📋 *Case Status (eCourts)*\n\nType your CNR number:\nExample: DLHC010123456789\n\n' + loc('menu_back'), hi: '📋 *केस स्थिति*\n\nCNR नंबर टाइप करें:\nउदाहरण: DLHC010123456789\n\n' + loc('menu_back'), mr: '📋 *केस स्थिती*\n\nCNR नंबर टाइप करा:\nउदा: DLHC010123456789\n\n' + loc('menu_back') }[lang] || '');
+      } else if (tLow === '4') {
+        await reply({ en: `📁 *My Cases*\n\nManage cases in the app:\n${appUrl}\n\n` + loc('menu_back'), hi: `📁 *मेरे केस*\n\nऐप खोलें:\n${appUrl}\n\n` + loc('menu_back'), mr: `📁 *माझे केस*\n\nअ‍ॅप उघडा:\n${appUrl}\n\n` + loc('menu_back') }[lang] || '');
+      } else if (tLow === '5') {
+        await reply({ en: `📅 *Calendar*\n\nView court dates:\n${appUrl}\n\n` + loc('menu_back'), hi: `📅 *कैलेंडर*\n\nतिथियाँ देखें:\n${appUrl}\n\n` + loc('menu_back'), mr: `📅 *दिनदर्शिका*\n\nतारखा पाहा:\n${appUrl}\n\n` + loc('menu_back') }[lang] || '');
+      } else if (tLow === '6') {
+        await reply({ en: `ℹ️ *Help*\n\nEmail: info@legalaidai.in\nWebsite: ${LEGAL_AID_APP_URL}\n\n` + loc('menu_back'), hi: `ℹ️ *सहायता*\n\nईमेल: info@legalaidai.in\n${LEGAL_AID_APP_URL}\n\n` + loc('menu_back'), mr: `ℹ️ *मदत*\n\nईमेल: info@legalaidai.in\n${LEGAL_AID_APP_URL}\n\n` + loc('menu_back') }[lang] || '');
+      } else {
+        await reply(buildMenu(lang, name, userType));
+      }
+    } else {
+      if (tLow === '1') {
+        await setSession({ state: 'research', user_type: userType });
+        await reply({ en: '⚖️ *Legal Research*\n\nType your legal question.\n\n' + loc('menu_back'), hi: '⚖️ *कानूनी शोध*\n\nप्रश्न टाइप करें।\n\n' + loc('menu_back'), mr: '⚖️ *कायदेशीर संशोधन*\n\nप्रश्न टाइप करा.\n\n' + loc('menu_back') }[lang] || '');
+      } else if (tLow === '2') {
+        await setSession({ state: 'ecourts', user_type: userType });
+        await reply({ en: '📋 *Case Status (eCourts)*\n\nType your CNR number:\nExample: DLHC010123456789\n\n' + loc('menu_back'), hi: '📋 *केस स्थिति*\n\nCNR नंबर:\nउदाहरण: DLHC010123456789\n\n' + loc('menu_back'), mr: '📋 *केस स्थिती*\n\nCNR क्रमांक:\nउदा: DLHC010123456789\n\n' + loc('menu_back') }[lang] || '');
+      } else if (tLow === '3') {
+        await reply({ en: `📁 *My Cases*\n\nView cases:\n${appUrl}\n\n` + loc('menu_back'), hi: `📁 *मेरे केस*\n\n${appUrl}\n\n` + loc('menu_back'), mr: `📁 *माझे केस*\n\n${appUrl}\n\n` + loc('menu_back') }[lang] || '');
+      } else if (tLow === '4') {
+        await reply({ en: `ℹ️ *Help*\n\nEmail: info@legalaidai.in\nWebsite: ${LEGAL_AID_APP_URL}\n\n` + loc('menu_back'), hi: `ℹ️ *सहायता*\n\nईमेल: info@legalaidai.in\n${LEGAL_AID_APP_URL}\n\n` + loc('menu_back'), mr: `ℹ️ *मदत*\n\nईमेल: info@legalaidai.in\n${LEGAL_AID_APP_URL}\n\n` + loc('menu_back') }[lang] || '');
+      } else {
+        await reply(buildMenu(lang, name, userType));
+      }
+    }
+    return;
+  }
+
+  // ── Research flow ───────────────────────────────────────────────────────
+  if (state === 'research') {
+    await reply({ en: '⚖️ Researching…', hi: '⚖️ शोध कर रहे हैं…', mr: '⚖️ संशोधन करत आहोत…' }[lang] || '⚖️ Researching…');
+    try {
+      const res = await callGateway('research', { uid, query: text, language: lang });
+      await reply(res.text || { en: 'Sorry, could not generate a response.', hi: 'क्षमा करें, उत्तर नहीं मिला।', mr: 'माफ करा, उत्तर मिळाले नाही.' }[lang] || '');
+    } catch (e) { await reply(loc('unavailable')); }
+    await reply({ en: 'Ask another question, or type *menu* to go back.', hi: 'और प्रश्न पूछें, या मेनू के लिए *menu* टाइप करें।', mr: 'आणखी प्रश्न विचारा, किंवा मेनूसाठी *menu* टाइप करा.' }[lang] || '');
+    return;
+  }
+
+  // ── eCourts flow ────────────────────────────────────────────────────────
+  if (state === 'ecourts') {
+    const cnr = (text || '').replace(/\s+/g, '').toUpperCase();
+    if (!/^[A-Z]{4}\d{12}$/.test(cnr)) {
+      await reply({ en: '❌ Invalid CNR format.\nCorrect: DLHC010123456789\nPlease try again.', hi: '❌ CNR सही नहीं है।\nसही: DLHC010123456789\nपुनः टाइप करें।', mr: '❌ CNR चुकीचा आहे.\nयोग्य: DLHC010123456789\nपुन्हा टाइप करा.' }[lang] || '');
+      return;
+    }
+    await reply({ en: '📋 Fetching case status…', hi: '📋 केस स्थिति जाँच रहे हैं…', mr: '📋 केस स्थिती तपासत आहोत…' }[lang] || '');
+    try {
+      const res = await callGateway('ecourts-status', { cnrNumber: cnr });
+      await reply(res.text || { en: 'Could not fetch case status.', hi: 'केस स्थिति नहीं मिली।', mr: 'केस स्थिती मिळाली नाही.' }[lang] || '');
+    } catch (e) { await reply(loc('unavailable')); }
+    await setSession({ state: 'menu', user_type: userType });
+    await reply(loc('menu_back'));
+    return;
+  }
+
+  // ── Draft flow (advocate only) ──────────────────────────────────────────
+  if (state === 'draft') {
+    await reply({ en: '📝 Generating draft…', hi: '📝 ड्राफ्ट तैयार हो रहा है…', mr: '📝 मसुदा तयार होत आहे…' }[lang] || '');
+    const query = `Generate a concise ${text} template for Indian courts. Plain text only, no markdown. Under 350 words.`;
+    try {
+      const res = await callGateway('research', { uid, query, language: lang });
+      await reply(res.text || { en: 'Could not generate draft.', hi: 'ड्राफ्ट तैयार नहीं हो सका।', mr: 'मसुदा तयार होऊ शकला नाही.' }[lang] || '');
+    } catch (e) { await reply(loc('unavailable')); }
+    await setSession({ state: 'menu', user_type: userType });
+    await reply(loc('menu_back'));
+    return;
+  }
+
+  // Fallback: unknown state → reset to language selection
+  await setSession({ state: 'lang_select' });
+  await reply(languagePrompt());
+}
+
 // ── Main handler ──────────────────────────────────────────────────────────
 exports.handler = async (event) => {
   // ── Webhook verification (GET from Meta) ───────────────────────────────
@@ -197,6 +399,12 @@ exports.handler = async (event) => {
         unread_count: (conversation.unread_count || 0) + 1,
         updated_at: new Date().toISOString(),
       }).eq('id', conversation.id);
+
+      // ── Legal Aid branch — runs for Nyaya Saathi business ────────────
+      if (business.service_mode === 'legal_aid') {
+        await handleLegalAid(business, contact, conversation, text, fromPhone, phoneNumberId);
+        return { statusCode: 200, body: 'OK' };
+      }
 
       // ── AI routing (Hybrid mode) ─────────────────────────────────────
       if (conversation.ai_enabled && text) {
