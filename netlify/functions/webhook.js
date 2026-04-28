@@ -221,16 +221,13 @@ async function handleLegalAid(business, _contact, conversation, text, fromPhone,
       await reply(`Hi ${sub.name || 'there'}! 👋\n\nYour account doesn't have WhatsApp AI access.\nPlease upgrade your plan at: ${LEGAL_AID_APP_URL}`);
       return;
     }
-    await setSession({ uid: sub.uid, name: sub.name || 'there', user_type: sub.user_type || 'citizen' });
+    await setSession({ uid: sub.uid, name: sub.name || 'there', user_type: sub.user_type || 'citizen', state: 'awaiting_lang' });
     await reply(languagePrompt());
     return;
   }
 
   // ── Language choice (1/2/3) ─────────────────────────────────────────────
-  if (state === 'lang_select' || (sd.uid && !sd.lang && ['1','2','3'].includes(tLow))) {
-    // handled above
-  }
-  if (sd.uid && !sd.lang) {
+  if (state === 'awaiting_lang') {
     if (['1','2','3'].includes(tLow)) {
       const chosenLang = tLow === '1' ? 'en' : tLow === '2' ? 'hi' : 'mr';
       await setSession({ lang: chosenLang, state: 'menu' });
