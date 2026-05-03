@@ -1,0 +1,8 @@
+node_modules/
+.netlify/
+*.zip
+*.log
+.env
+.env.local
+dist/
+dist-deploy/

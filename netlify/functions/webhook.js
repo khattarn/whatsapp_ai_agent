@@ -347,6 +347,18 @@ exports.handler = async (event) => {
       const change = entry?.changes?.[0];
       const value = change?.value;
 
+      // Write delivery/read status events to shared Supabase (wa_message_events)
+      if (value?.statuses?.length) {
+        for (const s of value.statuses) {
+          await supabase.from('wa_message_events').insert({
+            wamid: s.id,
+            phone: s.recipient_id,
+            status: s.status,
+            timestamp: new Date(parseInt(s.timestamp) * 1000).toISOString(),
+          }).catch(() => {});
+        }
+      }
+
       // Only process actual messages (not status updates)
       if (!value?.messages?.length) {
         return { statusCode: 200, body: 'OK' };
