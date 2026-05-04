@@ -6,6 +6,10 @@
 [functions]
   node_bundler = "esbuild"
 
+# Advocate outreach email batch — 10am IST = 04:30 UTC
+[functions.'send-batch-background']
+  schedule = "30 4 * * *"
+
 [[redirects]]
   from = "/api/*"
   to = "/.netlify/functions/:splat"
