@@ -128,6 +128,7 @@ exports.handler = async (event) => {
 
       if (result?.id) {
         sent++;
+
         await db.from('advocates')
           .update({ status: 'contacted', last_contacted_at: now })
           .eq('id', advocate.id);
@@ -140,13 +141,14 @@ exports.handler = async (event) => {
         if (existingConv) {
           convId = existingConv.id;
         } else {
-          const { data: newConv } = await db.from('outreach_conversations')
+          const { data: newConv, error: convErr } = await db.from('outreach_conversations')
             .insert({ advocate_id: advocate.id }).select('id').single();
+          if (convErr) console.error('[send-batch-background] conv insert failed:', convErr.message);
           convId = newConv?.id;
         }
 
         if (convId) {
-          await db.from('outreach_messages').insert({
+          const { error: msgErr } = await db.from('outreach_messages').insert({
             conversation_id: convId,
             subject,
             body: text,
@@ -155,7 +157,8 @@ exports.handler = async (event) => {
             needs_human_review: false,
             sent_at: now,
             provider_id: result.id,
-          }).catch(e => console.error('[send-batch-background] message log failed:', e.message));
+          });
+          if (msgErr) console.error('[send-batch-background] message log failed:', msgErr.message);
         }
       } else {
         failed++;
@@ -169,10 +172,11 @@ exports.handler = async (event) => {
 
   const runResult = { sent, failed, total: advocates?.length || 0, runAt: now };
 
-  await db.from('settings').upsert([
+  const { error: settingsErr } = await db.from('settings').upsert([
     { key: 'outreach_last_run', value: now },
     { key: 'outreach_last_run_result', value: JSON.stringify(runResult) },
-  ], { onConflict: 'key' }).catch(e => console.error('[send-batch-background] settings update failed:', e.message));
+  ], { onConflict: 'key' });
+  if (settingsErr) console.error('[send-batch-background] settings update failed:', settingsErr.message);
 
   console.log('[send-batch-background] done:', runResult);
   return { statusCode: 200, body: JSON.stringify({ success: true, ...runResult }) };
