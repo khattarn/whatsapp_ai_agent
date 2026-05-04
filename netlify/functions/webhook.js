@@ -350,13 +350,17 @@ exports.handler = async (event) => {
       // Write delivery/read status events to shared Supabase (wa_message_events)
       if (value?.statuses?.length) {
         for (const s of value.statuses) {
+          const errObj = s.errors?.[0] || null;
           const { error: evtErr } = await supabase.from('wa_message_events').insert({
             wamid: s.id,
             phone: s.recipient_id,
             status: s.status,
             timestamp: new Date(parseInt(s.timestamp) * 1000).toISOString(),
+            error_code: errObj?.code || null,
+            error_title: errObj?.title || null,
           });
           if (evtErr) console.error('[webhook] wa_message_events insert failed:', evtErr.message);
+          if (s.status === 'failed') console.error('[webhook] delivery failed:', s.recipient_id, errObj?.code, errObj?.title);
         }
       }
 
