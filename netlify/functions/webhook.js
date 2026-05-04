@@ -349,6 +349,7 @@ exports.handler = async (event) => {
 
       // Write delivery/read status events to shared Supabase (wa_message_events)
       if (value?.statuses?.length) {
+        const UNDELIVERABLE_CODES = [131026, 131042];
         for (const s of value.statuses) {
           const errObj = s.errors?.[0] || null;
           const { error: evtErr } = await supabase.from('wa_message_events').insert({
@@ -360,7 +361,17 @@ exports.handler = async (event) => {
             error_title: errObj?.title || null,
           });
           if (evtErr) console.error('[webhook] wa_message_events insert failed:', evtErr.message);
-          if (s.status === 'failed') console.error('[webhook] delivery failed:', s.recipient_id, errObj?.code, errObj?.title);
+
+          // Mark permanently undeliverable advocates so cron skips them
+          if (s.status === 'failed' && UNDELIVERABLE_CODES.includes(errObj?.code)) {
+            const phone = '+' + s.recipient_id;
+            const { error: advErr } = await supabase.from('advocates')
+              .update({ status: 'wa_failed' })
+              .eq('phone_e164', phone)
+              .in('status', ['contacted', 'ready_to_contact']);
+            if (advErr) console.error('[webhook] advocate wa_failed update failed:', advErr.message);
+            else console.log('[webhook] marked wa_failed:', phone, errObj?.code);
+          }
         }
       }
 
