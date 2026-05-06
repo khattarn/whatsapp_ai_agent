@@ -205,6 +205,11 @@ async function handleLegalAid(business, _contact, conversation, text, fromPhone,
 
   // "menu" keyword resets from any state
   if (['menu', 'मेनू', 'मेनु'].includes(tLow) && state !== 'lang_select') {
+    if (!uid) {
+      await setSession({ state: 'unregistered_menu' });
+      await reply(`⚖️ *LegalAid AI — Nyaya Saathi*\n\n1️⃣ Ask a Legal Question (free)\n2️⃣ Get Full App Access\n3️⃣ Talk to Our Team\n\nReply with 1, 2, or 3.`);
+      return;
+    }
     await setSession({ state: 'menu', user_type: userType });
     await reply(buildMenu(lang, name, userType));
     return;
@@ -214,7 +219,20 @@ async function handleLegalAid(business, _contact, conversation, text, fromPhone,
   if (state === 'lang_select') {
     const sub = await callGateway('verify-subscriber', { phone: fromPhone });
     if (!sub.registered) {
-      await reply(`👋 Welcome to *Nyaya Saathi*!\n\nThis service is for registered users.\nPlease sign up at ${LEGAL_AID_APP_URL}/advocate\n\nAlready registered? Make sure your WhatsApp number is saved in your profile (Settings).`);
+      await setSession({ state: 'unregistered_menu' });
+      await reply(
+        `👋 Welcome to *LegalAid AI — Nyaya Saathi!* ⚖️\n\n` +
+        `India's AI-powered legal assistant for advocates and citizens.\n\n` +
+        `I can help you with:\n` +
+        `• Instant answers on Indian law\n` +
+        `• Case law research\n` +
+        `• Document drafting\n\n` +
+        `*Choose an option:*\n\n` +
+        `1️⃣ Ask a Legal Question (free, instant)\n` +
+        `2️⃣ Get Full App Access (free beta)\n` +
+        `3️⃣ Talk to Our Team\n\n` +
+        `Reply with 1, 2, or 3.`
+      );
       return;
     }
     if (!sub.subscribed) {
@@ -316,6 +334,58 @@ async function handleLegalAid(business, _contact, conversation, text, fromPhone,
     } catch (e) { await reply(loc('unavailable')); }
     await setSession({ state: 'menu', user_type: userType });
     await reply(loc('menu_back'));
+    return;
+  }
+
+  // ── Unregistered user menu (option 1/2/3) ──────────────────────────────
+  if (state === 'unregistered_menu') {
+    if (tLow === '1') {
+      await setSession({ state: 'unregistered_query' });
+      await reply(
+        `Sure! Type your legal question and I'll give you an instant answer.\n\n` +
+        `For full research with case citations and document drafting, get free access at:\n` +
+        `${LEGAL_AID_APP_URL}/advocate`
+      );
+    } else if (tLow === '2') {
+      await reply(
+        `Get free beta access in 2 minutes:\n\n` +
+        `👉 ${LEGAL_AID_APP_URL}/advocate\n\n` +
+        `After signing up, save your WhatsApp number in Settings to enable this chatbot for your account. ✅`
+      );
+    } else if (tLow === '3') {
+      await supabase.from('conversations').update({ needs_human: true, ai_enabled: false }).eq('id', conversation.id);
+      await reply(
+        `Happy to help! Our team will reach out to you shortly. 🙏\n\n` +
+        `You can also email us: info@legalaidai.in\n` +
+        `Website: ${LEGAL_AID_APP_URL}`
+      );
+    } else {
+      await reply(`Please reply with:\n\n1️⃣ Ask a Legal Question\n2️⃣ Get Full App Access\n3️⃣ Talk to Our Team`);
+    }
+    return;
+  }
+
+  // ── Unregistered user free query ────────────────────────────────────────
+  if (state === 'unregistered_query') {
+    await reply('⚖️ Researching…');
+    try {
+      const aiRes = await anthropic.messages.create({
+        model: 'claude-haiku-4-5-20251001',
+        max_tokens: 400,
+        system: 'You are Nyaya Saathi, an AI legal assistant for Indian law. Answer the user\'s legal question concisely and accurately. Cite relevant Indian statutes or landmark cases where helpful. Keep the response under 350 words in plain text (no markdown).',
+        messages: [{ role: 'user', content: text || '' }],
+      });
+      const answer = aiRes.content[0]?.text || 'Sorry, I could not generate a response. Please try again.';
+      await reply(answer);
+    } catch (e) {
+      console.error('[handleLegalAid] unregistered query error:', e.message);
+      await reply('Sorry, I could not process your question right now. Please try again.');
+    }
+    await reply(
+      `For full legal research with case citations and document drafting, get free access at:\n` +
+      `${LEGAL_AID_APP_URL}/advocate\n\n` +
+      `Ask another question, or type *menu* to go back.`
+    );
     return;
   }
 
