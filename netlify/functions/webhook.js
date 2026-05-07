@@ -472,7 +472,13 @@ exports.handler = async (event) => {
       const conversation = await upsertConversation(contact.id, business.id);
 
       // Store the inbound message
-      const contentText = text || `[${msgType} message received]`;
+      const UNSUPPORTED_LABELS = {
+        audio: '🎤 Voice message received', image: '📷 Image received',
+        video: '🎥 Video received', document: '📄 Document received',
+        sticker: '🔖 Sticker received', location: '📍 Location shared',
+        contacts: '👤 Contact card received', reaction: '👍 Reaction received',
+      };
+      const contentText = text || UNSUPPORTED_LABELS[msgType] || `[${msgType} message received]`;
       await supabase.from('messages').insert({
         conversation_id: conversation.id,
         from_phone: fromPhone,
@@ -495,13 +501,66 @@ exports.handler = async (event) => {
         updated_at: new Date().toISOString(),
       }).eq('id', conversation.id);
 
+      // ── Opt-out / re-subscribe handling — intercepts before any AI routing ────
+      const OPT_OUT_RE = /^\s*(stop|unsubscribe|cancel|opt[\s-]?out|end|quit)\s*$/i;
+      const OPT_IN_RE  = /^\s*(start|subscribe|optin|opt[\s-]?in|resume|resubscribe)\s*$/i;
+      if (text && OPT_OUT_RE.test(text)) {
+        const optOutMsg = "You have been unsubscribed from Nyaya Saathi messages. We will not contact you in the future.\n\nTo resubscribe, reply *START* anytime.";
+        await sendWhatsAppMessage(business.access_token, phoneNumberId, fromPhone, optOutMsg);
+        await supabase.from('messages').insert({
+          conversation_id: conversation.id, from_phone: phoneNumberId, to_phone: fromPhone,
+          content: optOutMsg, direction: 'outbound', sender_type: 'ai', status: 'sent',
+          timestamp: new Date().toISOString(),
+        });
+        await supabase.from('advocates')
+          .update({ do_not_contact: true })
+          .eq('phone_e164', '+' + fromPhone);
+        await supabase.from('conversations').update({ status: 'closed' }).eq('id', conversation.id);
+        return { statusCode: 200, body: 'OK' };
+      }
+      if (text && OPT_IN_RE.test(text)) {
+        const optInMsg = "Welcome back to Nyaya Saathi! ⚖️\n\nYou have been resubscribed. You will receive messages from us again.\n\nReply *menu* to get started.";
+        await sendWhatsAppMessage(business.access_token, phoneNumberId, fromPhone, optInMsg);
+        await supabase.from('messages').insert({
+          conversation_id: conversation.id, from_phone: phoneNumberId, to_phone: fromPhone,
+          content: optInMsg, direction: 'outbound', sender_type: 'ai', status: 'sent',
+          timestamp: new Date().toISOString(),
+        });
+        await supabase.from('advocates')
+          .update({ do_not_contact: false })
+          .eq('phone_e164', '+' + fromPhone);
+        await supabase.from('conversations').update({ status: 'open' }).eq('id', conversation.id);
+        return { statusCode: 200, body: 'OK' };
+      }
+
       // ── Legal Aid branch — runs for Nyaya Saathi business ────────────
       if (business.service_mode === 'legal_aid') {
+        if (msgType !== 'text' && msgType !== 'button' && msgType !== 'interactive' && msgType !== 'reaction') {
+          const unsupportedReply = "Thanks for reaching out! We can't process audio/image messages right now. Please type your question and we'll be happy to help.";
+          await sendWhatsAppMessage(business.access_token, phoneNumberId, fromPhone, unsupportedReply);
+          await supabase.from('messages').insert({
+            conversation_id: conversation.id, from_phone: phoneNumberId, to_phone: fromPhone,
+            content: unsupportedReply, direction: 'outbound', sender_type: 'ai', status: 'sent',
+            timestamp: new Date().toISOString(),
+          });
+          return { statusCode: 200, body: 'OK' };
+        }
         await handleLegalAid(business, contact, conversation, text, fromPhone, phoneNumberId);
         return { statusCode: 200, body: 'OK' };
       }
 
       // ── AI routing (Hybrid mode) ─────────────────────────────────────
+      if (msgType !== 'text' && msgType !== 'button' && msgType !== 'interactive' && msgType !== 'reaction') {
+        const unsupportedReply = "Thanks for reaching out! We can't process audio/image messages right now. Please type your question and we'll be happy to help.";
+        await sendWhatsAppMessage(business.access_token, phoneNumberId, fromPhone, unsupportedReply);
+        await supabase.from('messages').insert({
+          conversation_id: conversation.id, from_phone: phoneNumberId, to_phone: fromPhone,
+          content: unsupportedReply, direction: 'outbound', sender_type: 'ai', status: 'sent',
+          timestamp: new Date().toISOString(),
+        });
+        return { statusCode: 200, body: 'OK' };
+      }
+
       if (conversation.ai_enabled && text) {
         const complex = needsHuman(text);
         const simple  = isSimpleQuery(text);
