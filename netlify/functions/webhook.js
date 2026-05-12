@@ -97,6 +97,16 @@ async function sendWhatsAppMessage(accessToken, phoneNumberId, toPhone, text) {
   return data;
 }
 
+// ── Resolve advocate name from the advocates table by phone ───────────────
+async function resolveAdvocateName(phone) {
+  const { data: adv } = await supabase
+    .from('advocates')
+    .select('full_name')
+    .eq('phone_e164', '+' + phone)
+    .single();
+  return adv?.full_name || null;
+}
+
 // ── Find or create contact ─────────────────────────────────────────────────
 async function upsertContact(phone, businessId) {
   const { data: existing } = await supabase
@@ -107,13 +117,24 @@ async function upsertContact(phone, businessId) {
     .single();
 
   if (existing) {
-    await supabase.from('contacts').update({ last_seen: new Date().toISOString() }).eq('id', existing.id);
+    const updatePayload = { last_seen: new Date().toISOString() };
+    // Self-heal: if name is still the raw phone number, resolve from advocates
+    if (existing.name === phone) {
+      const advName = await resolveAdvocateName(phone);
+      if (advName) {
+        updatePayload.name = advName;
+        existing.name = advName;
+      }
+    }
+    await supabase.from('contacts').update(updatePayload).eq('id', existing.id);
     return existing;
   }
 
+  // New contact — look up advocate name before falling back to phone
+  const advName = await resolveAdvocateName(phone);
   const { data: created } = await supabase
     .from('contacts')
-    .insert({ phone, name: phone, business_id: businessId, last_seen: new Date().toISOString() })
+    .insert({ phone, name: advName || phone, business_id: businessId, last_seen: new Date().toISOString() })
     .select()
     .single();
   return created;
