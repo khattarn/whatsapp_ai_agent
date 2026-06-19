@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>WhatsApp Template Management — LawAid AI Agent Guide</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --navy: #0D1B3E;
+      --gold:  #C5A041;
+      --bg:    #F8F9FB;
+      --card:  #FFFFFF;
+      --border: #E5E7EB;
+      --text:  #111827;
+      --muted: #6B7280;
+      --green: #059669;
+      --red:   #DC2626;
+      --blue:  #1D4ED8;
+    }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); line-height: 1.6; }
+
+    /* ── Header ── */
+    .site-header { background: var(--navy); color: #fff; padding: 28px 40px; }
+    .site-header h1 { font-size: 24px; font-weight: 700; }
+    .site-header p  { font-size: 14px; color: rgba(255,255,255,.7); margin-top: 4px; }
+    .badge { display: inline-block; background: var(--gold); color: var(--navy); border-radius: 20px; padding: 2px 10px; font-size: 12px; font-weight: 700; margin-left: 10px; vertical-align: middle; }
+
+    /* ── Layout ── */
+    .page { max-width: 900px; margin: 0 auto; padding: 40px 24px 80px; }
+    .toc  { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 20px 24px; margin-bottom: 36px; }
+    .toc h2 { font-size: 14px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; margin-bottom: 10px; }
+    .toc ol { padding-left: 18px; }
+    .toc li { margin-bottom: 4px; }
+    .toc a  { color: var(--blue); text-decoration: none; font-size: 14px; }
+    .toc a:hover { text-decoration: underline; }
+
+    /* ── Section ── */
+    section { margin-bottom: 48px; }
+    section h2 { font-size: 20px; font-weight: 700; border-bottom: 2px solid var(--gold); padding-bottom: 8px; margin-bottom: 20px; }
+    section h3 { font-size: 16px; font-weight: 700; margin: 24px 0 10px; }
+    section p  { font-size: 14px; color: var(--text); margin-bottom: 12px; }
+    section ul, section ol { padding-left: 20px; margin-bottom: 12px; }
+    section li { font-size: 14px; margin-bottom: 6px; }
+
+    /* ── Cards / callouts ── */
+    .card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 20px 24px; margin-bottom: 16px; }
+    .info  { background: #EFF6FF; border-color: #BFDBFE; border-radius: 8px; padding: 12px 16px; font-size: 13px; color: var(--blue); margin-bottom: 14px; }
+    .warn  { background: #FFFBEB; border-color: #FCD34D; border-radius: 8px; padding: 12px 16px; font-size: 13px; color: #92400E; margin-bottom: 14px; }
+    .tip   { background: #F0FDF4; border-color: #86EFAC; border-radius: 8px; padding: 12px 16px; font-size: 13px; color: #166534; margin-bottom: 14px; }
+    .danger{ background: #FEF2F2; border-color: #FCA5A5; border-radius: 8px; padding: 12px 16px; font-size: 13px; color: var(--red); margin-bottom: 14px; }
+
+    /* ── Steps ── */
+    .steps { counter-reset: step; }
+    .step  { display: flex; gap: 16px; margin-bottom: 20px; }
+    .step-num { width: 32px; height: 32px; border-radius: 50%; background: var(--navy); color: #fff; font-weight: 700; font-size: 14px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 2px; }
+    .step-body h4 { font-size: 15px; font-weight: 700; margin-bottom: 4px; }
+    .step-body p, .step-body ul { font-size: 14px; color: var(--muted); }
+    .step-body ul { padding-left: 16px; margin-top: 6px; }
+    .step-body li { margin-bottom: 4px; }
+
+    /* ── Status badges ── */
+    .status { display: inline-block; padding: 3px 10px; border-radius: 20px; font-size: 12px; font-weight: 700; margin: 0 3px; }
+    .status.approved { background: #DCFCE7; color: #166534; }
+    .status.pending  { background: #FEF9C3; color: #854D0E; }
+    .status.rejected { background: #FEE2E2; color: #991B1B; }
+    .status.paused   { background: #F3F4F6; color: #6B7280; }
+
+    /* ── Field reference table ── */
+    table { width: 100%; border-collapse: collapse; font-size: 13px; margin-bottom: 16px; }
+    th { background: #F9FAFB; padding: 9px 12px; border: 1px solid var(--border); text-align: left; font-weight: 700; color: var(--muted); }
+    td { padding: 8px 12px; border: 1px solid var(--border); vertical-align: top; }
+    td:first-child { font-weight: 600; white-space: nowrap; }
+    td code { background: #F3F4F6; padding: 1px 5px; border-radius: 4px; font-size: 12px; }
+    tr:nth-child(even) td { background: #FAFAFA; }
+
+    /* ── Screenshot placeholder ── */
+    .screen-ph { background: #F3F4F6; border: 2px dashed var(--border); border-radius: 8px; padding: 32px; text-align: center; color: var(--muted); font-size: 13px; margin-bottom: 16px; }
+
+    /* ── Footer ── */
+    footer { text-align: center; font-size: 12px; color: var(--muted); padding-top: 24px; border-top: 1px solid var(--border); }
+    footer a { color: var(--blue); }
+
+    @media (max-width: 640px) {
+      .site-header { padding: 20px; }
+      .page { padding: 24px 16px 60px; }
+    }
+  </style>
+</head>
+<body>
+
+<header class="site-header">
+  <h1>📋 WhatsApp Template Management <span class="badge">Agent Guide</span></h1>
+  <p>How to create, upload, and manage WhatsApp message templates — LawAid AI &amp; Garment Retail</p>
+</header>
+
+<div class="page">
+
+  <!-- Table of Contents -->
+  <div class="toc">
+    <h2>Contents</h2>
+    <ol>
+      <li><a href="#overview">Overview</a></li>
+      <li><a href="#templates-tab">Accessing the Templates Tab</a></li>
+      <li><a href="#assets">Assets Library — Uploading Images</a></li>
+      <li><a href="#create">Creating a Template</a></li>
+      <li><a href="#field-reference">Field Reference</a></li>
+      <li><a href="#approval">Template Approval &amp; Notifications</a></li>
+      <li><a href="#using">Using Approved Templates in Broadcasts</a></li>
+      <li><a href="#tips">Tips &amp; Best Practices</a></li>
+      <li><a href="#troubleshooting">Troubleshooting</a></li>
+    </ol>
+  </div>
+
+  <!-- 1. Overview -->
+  <section id="overview">
+    <h2>1. Overview</h2>
+    <p>WhatsApp <strong>message templates</strong> are pre-approved message formats that allow you to contact customers <strong>outside the 24-hour messaging window</strong> — for example for broadcast campaigns, appointment reminders, or order updates.</p>
+    <p>All templates must be reviewed and approved by Meta before use. This dashboard lets you create, manage, and monitor that entire process without leaving the app.</p>
+
+    <div class="info">
+      <strong>When do you need a template?</strong> Any time you start a conversation with a customer who hasn't messaged you in the last 24 hours — for example, a broadcast campaign to your full contact list.
+    </div>
+
+    <table>
+      <thead><tr><th>Message Type</th><th>When it works</th><th>Needs Meta Approval?</th></tr></thead>
+      <tbody>
+        <tr><td>Free-form text</td><td>Within 24 hrs of customer's last message</td><td>No</td></tr>
+        <tr><td>Template</td><td>Any time — even after 24 hrs</td><td>Yes</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- 2. Templates Tab -->
+  <section id="templates-tab">
+    <h2>2. Accessing the Templates Tab</h2>
+    <p>Click the <strong>📋 Templates</strong> tab in the top navigation bar (between Broadcasts and Settings).</p>
+    <p>The tab contains three sections stacked top to bottom:</p>
+    <ul>
+      <li><strong>Approval Notifications</strong> — banners shown when Meta approves or rejects a template</li>
+      <li><strong>🖼️ Assets Library</strong> — upload and manage images/videos for use in template headers</li>
+      <li><strong>➕ Create New Template</strong> — build and submit a template for Meta approval</li>
+      <li><strong>📋 Your Templates</strong> — view, filter, and delete existing templates</li>
+    </ul>
+  </section>
+
+  <!-- 3. Assets Library -->
+  <section id="assets">
+    <h2>3. Assets Library — Uploading Images</h2>
+    <p>Before creating a template with an image, video, or document header, upload the file here to get a permanent public URL.</p>
+
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">1</div>
+        <div class="step-body">
+          <h4>Select your business</h4>
+          <p>Use the <em>Business</em> dropdown at the top of the Assets Library card. Assets are stored per business.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">2</div>
+        <div class="step-body">
+          <h4>Upload your file</h4>
+          <p>Drag and drop the file onto the upload zone, or click to browse. Supported formats:</p>
+          <ul>
+            <li><strong>Images:</strong> JPEG, PNG, GIF, WebP</li>
+            <li><strong>Video:</strong> MP4</li>
+            <li><strong>Documents:</strong> PDF</li>
+          </ul>
+          <p>Maximum file size: <strong>10 MB</strong>.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">3</div>
+        <div class="step-body">
+          <h4>Copy the public URL</h4>
+          <p>After upload, the image appears in the gallery. Click <strong>📋 Copy URL</strong> to copy the public link. This URL is what you use in template headers and broadcasts.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="tip">
+      <strong>Tip:</strong> Uploaded assets are stored in Supabase Storage and served via a CDN. The URLs are permanent and publicly accessible — exactly what Meta requires for template headers and broadcast media.
+    </div>
+    <div class="warn">
+      <strong>Best image dimensions for WhatsApp template headers:</strong> 800 × 418 px (approx. 1.91:1 ratio). Avoid very tall or narrow images.
+    </div>
+  </section>
+
+  <!-- 4. Creating a Template -->
+  <section id="create">
+    <h2>4. Creating a Template</h2>
+    <p>Fill in the <strong>Create New Template</strong> form. All required fields are marked below.</p>
+
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">1</div>
+        <div class="step-body">
+          <h4>Select Business <span style="color:var(--red)">*</span></h4>
+          <p>Choose which WhatsApp number this template belongs to (Garment Retail or LawAid AI).</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">2</div>
+        <div class="step-body">
+          <h4>Template Name <span style="color:var(--red)">*</span></h4>
+          <p>Lowercase letters, numbers, and underscores only. This name is permanent — it cannot be changed after submission.</p>
+          <p>Examples: <code>summer_sale_2026</code>, <code>appointment_reminder</code>, <code>order_shipped</code></p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">3</div>
+        <div class="step-body">
+          <h4>Category <span style="color:var(--red)">*</span></h4>
+          <ul>
+            <li><strong>📣 Marketing</strong> — promotions, offers, newsletters</li>
+            <li><strong>🔧 Utility</strong> — order updates, appointment reminders, account alerts</li>
+            <li><strong>🔐 Authentication</strong> — OTPs and verification codes</li>
+          </ul>
+          <p>Choosing the right category affects cost and deliverability. Utility templates have lower per-message cost than Marketing.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">4</div>
+        <div class="step-body">
+          <h4>Language <span style="color:var(--red)">*</span></h4>
+          <p>Choose the primary language. You can submit separate templates for Hindi (<code>hi</code>) and Marathi (<code>mr</code>) if needed.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">5</div>
+        <div class="step-body">
+          <h4>Header (optional)</h4>
+          <p>Choose from:</p>
+          <ul>
+            <li><strong>None</strong> — text body only</li>
+            <li><strong>📝 Text</strong> — a bold one-line title (max 60 chars). Use <code>{{1}}</code> for one variable.</li>
+            <li><strong>🖼️ Image</strong> — displays an image above the message body. Paste the URL from Assets Library or click <strong>📁 Browse Assets</strong>.</li>
+            <li><strong>🎬 Video</strong> — embeds a video thumbnail. Paste a public MP4 URL.</li>
+            <li><strong>📄 Document</strong> — attaches a document. Paste a public PDF URL.</li>
+          </ul>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">6</div>
+        <div class="step-body">
+          <h4>Body <span style="color:var(--red)">*</span></h4>
+          <p>The main message text (max 1024 chars). Use numbered placeholders for personalisation:</p>
+          <ul>
+            <li><code>{{1}}</code> — first variable (e.g. customer name)</li>
+            <li><code>{{2}}</code> — second variable (e.g. order number)</li>
+            <li>… and so on</li>
+          </ul>
+          <p>When you add variables, <strong>Example value</strong> fields appear automatically. Fill these in — Meta uses them to review your template.</p>
+          <p><strong>Example body:</strong><br><em>Hi {{1}}, your order {{2}} has been dispatched and will arrive by {{3}}. Track it here: https://track.example.com</em></p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">7</div>
+        <div class="step-body">
+          <h4>Footer (optional)</h4>
+          <p>A short line of grey text shown below the body (max 60 chars). Commonly used for opt-out instructions.</p>
+          <p>Example: <em>Reply STOP to unsubscribe</em></p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">8</div>
+        <div class="step-body">
+          <h4>Buttons (optional — up to 3)</h4>
+          <p>Click <strong>+ Add Button</strong> and choose a type:</p>
+          <ul>
+            <li><strong>💬 Quick Reply</strong> — customer taps to send a fixed reply (e.g. "Yes, interested" or "No thanks"). Enter just the button label.</li>
+            <li><strong>🔗 URL</strong> — opens a link when tapped. Enter label + full URL. Append <code>{{1}}</code> at the end of the URL for a dynamic suffix (e.g. <code>https://yourstore.com/order/{{1}}</code>).</li>
+            <li><strong>📞 Phone</strong> — dials a number when tapped. Enter label + full phone number in international format (e.g. <code>+919876543210</code>).</li>
+          </ul>
+          <div class="warn" style="margin-top:8px">Don't mix Quick Reply buttons and CTA buttons (URL/Phone) in the same template.</div>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">9</div>
+        <div class="step-body">
+          <h4>Submit for Approval</h4>
+          <p>Click <strong>📤 Submit for Meta Approval</strong>. A success message will confirm the template ID and initial status (<span class="status pending">PENDING</span>). Meta typically reviews templates within a few minutes to a few hours.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 5. Field Reference -->
+  <section id="field-reference">
+    <h2>5. Field Reference</h2>
+    <table>
+      <thead><tr><th>Field</th><th>Required</th><th>Notes</th></tr></thead>
+      <tbody>
+        <tr><td>Business</td><td>Yes</td><td>Determines which WhatsApp number the template is tied to</td></tr>
+        <tr><td>Template Name</td><td>Yes</td><td>Lowercase, underscores only. Permanent after submission. Max 512 chars.</td></tr>
+        <tr><td>Category</td><td>Yes</td><td><code>MARKETING</code> · <code>UTILITY</code> · <code>AUTHENTICATION</code></td></tr>
+        <tr><td>Language</td><td>Yes</td><td><code>en_US</code> · <code>en</code> · <code>hi</code> · <code>mr</code> · <code>en_GB</code></td></tr>
+        <tr><td>Header Type</td><td>No</td><td>NONE · TEXT · IMAGE · VIDEO · DOCUMENT</td></tr>
+        <tr><td>Header Text</td><td>If TEXT header</td><td>Max 60 chars. One variable (<code>{{1}}</code>) allowed.</td></tr>
+        <tr><td>Header Media URL</td><td>No</td><td>Public HTTPS URL from Assets Library. Used at broadcast time.</td></tr>
+        <tr><td>Body Text</td><td>Yes</td><td>Max 1024 chars. Variables: <code>{{1}}</code>, <code>{{2}}</code>, …</td></tr>
+        <tr><td>Body Variable Examples</td><td>If variables used</td><td>Required by Meta for review. Appear automatically in the form.</td></tr>
+        <tr><td>Footer</td><td>No</td><td>Max 60 chars. No variables.</td></tr>
+        <tr><td>Buttons</td><td>No</td><td>Up to 3 Quick Reply OR up to 2 CTA (URL/Phone). Not mixed.</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- 6. Approval -->
+  <section id="approval">
+    <h2>6. Template Approval &amp; Notifications</h2>
+
+    <h3>Approval statuses</h3>
+    <table>
+      <thead><tr><th>Status</th><th>Meaning</th></tr></thead>
+      <tbody>
+        <tr><td><span class="status pending">PENDING</span></td><td>Submitted to Meta and awaiting review. Usually resolves within minutes to a few hours.</td></tr>
+        <tr><td><span class="status approved">APPROVED</span></td><td>Ready to use in Broadcasts and outbound messages.</td></tr>
+        <tr><td><span class="status rejected">REJECTED</span></td><td>Meta did not approve the template. The rejection reason is shown in the notification banner and in the template list.</td></tr>
+        <tr><td><span class="status paused">PAUSED</span></td><td>Template has been paused by Meta, usually due to low customer engagement or quality issues. Cannot be sent until re-enabled.</td></tr>
+      </tbody>
+    </table>
+
+    <h3>How notifications work</h3>
+    <p>When Meta approves or rejects a template, it sends a webhook event to your app's <code>/api/webhook</code> URL. The app automatically captures this and displays a <strong>notification banner</strong> at the top of the Templates tab the next time you open it.</p>
+    <ul>
+      <li>✅ Green banner = <strong>APPROVED</strong> — template is ready to use</li>
+      <li>❌ Red banner = <strong>REJECTED</strong> — reason is shown in the banner</li>
+    </ul>
+    <p>Dismiss each banner by clicking <strong>✕</strong>. Dismissed notifications will not reappear.</p>
+
+    <div class="info">
+      <strong>Prerequisite:</strong> For notifications to work, your webhook URL (<code>https://your-site.netlify.app/api/webhook</code>) must be subscribed to the <code>message_template_status_update</code> field in Meta Business Manager → WhatsApp Manager → Configuration → Webhook fields.
+    </div>
+
+    <h3>Subscribing to template status webhook events</h3>
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">1</div>
+        <div class="step-body"><h4>Open Meta Business Manager</h4><p>Go to business.facebook.com → WhatsApp Manager → Configuration.</p></div>
+      </div>
+      <div class="step">
+        <div class="step-num">2</div>
+        <div class="step-body"><h4>Edit Webhook Fields</h4><p>Click <strong>Manage</strong> next to Webhook fields and enable <strong>message_template_status_update</strong>.</p></div>
+      </div>
+      <div class="step">
+        <div class="step-num">3</div>
+        <div class="step-body"><h4>Save</h4><p>Click Subscribe. Meta will now send status events to your webhook URL automatically.</p></div>
+      </div>
+    </div>
+
+    <h3>Checking status manually</h3>
+    <p>Open the Templates tab, select a business in the <strong>Your Templates</strong> card, and click <strong>Load</strong>. The current status from Meta is always shown live.</p>
+
+    <h3>If your template is rejected</h3>
+    <ul>
+      <li>Read the rejection reason in the notification banner or template list card</li>
+      <li>Common reasons: promotional language in Utility templates, vague body text, missing opt-out in Marketing templates</li>
+      <li>Delete the rejected template and resubmit with a corrected version (use a new name or the same name — Meta allows resubmission)</li>
+    </ul>
+  </section>
+
+  <!-- 7. Using in Broadcasts -->
+  <section id="using">
+    <h2>7. Using Approved Templates in Broadcasts</h2>
+    <p>Once a template is <span class="status approved">APPROVED</span>, you can use it in the Broadcasts tab.</p>
+
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">1</div>
+        <div class="step-body"><h4>Go to 📢 Broadcasts</h4><p>Click the Broadcasts tab in the top navigation.</p></div>
+      </div>
+      <div class="step">
+        <div class="step-num">2</div>
+        <div class="step-body"><h4>Select Message Type → Template</h4><p>Click the <strong>📋 Template</strong> card in the Message Type row.</p></div>
+      </div>
+      <div class="step">
+        <div class="step-num">3</div>
+        <div class="step-body">
+          <h4>Enter the Template Name</h4>
+          <p>Type the exact template name as submitted (e.g. <code>summer_sale_2026</code>). This must match exactly — case-sensitive.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">4</div>
+        <div class="step-body">
+          <h4>Fill in variables and media</h4>
+          <ul>
+            <li>Add body variable values (e.g. <code>{{1}}</code> = <code>{first_name}</code> for personalisation)</li>
+            <li>If your template has an Image/Video/Document header, paste the media URL from Assets Library</li>
+            <li>Add button parameters if your template has dynamic URL or quick-reply buttons</li>
+          </ul>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">5</div>
+        <div class="step-body"><h4>Select recipients and send</h4><p>Choose all opted-in contacts or filter by tag, then click <strong>📤 Send Campaign</strong>.</p></div>
+      </div>
+    </div>
+
+    <h3>Personalisation variables</h3>
+    <p>In the variable value fields, you can use these tokens — they are replaced per contact at send time:</p>
+    <table>
+      <thead><tr><th>Token</th><th>Replaced with</th></tr></thead>
+      <tbody>
+        <tr><td><code>{name}</code></td><td>Contact's full name</td></tr>
+        <tr><td><code>{first_name}</code></td><td>First word of contact's name</td></tr>
+        <tr><td><code>{phone}</code></td><td>Contact's phone number</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- 8. Tips -->
+  <section id="tips">
+    <h2>8. Tips &amp; Best Practices</h2>
+    <ul>
+      <li><strong>Use Utility category for transactional messages</strong> — order updates, appointment reminders, and delivery notifications are cheaper and faster to approve as Utility rather than Marketing.</li>
+      <li><strong>Always include an opt-out in Marketing templates</strong> — add a footer like <em>"Reply STOP to unsubscribe"</em> or a Quick Reply button. Meta requires it and customers expect it.</li>
+      <li><strong>Keep body text specific</strong> — vague bodies like "Check this out!" are often rejected. Be clear about what you are communicating.</li>
+      <li><strong>Use meaningful example values</strong> — when your body has <code>{{1}}</code>, fill in a realistic example like <em>"Priya Sharma"</em> not <em>"Example1"</em>. Better examples lead to faster approvals.</li>
+      <li><strong>Image headers get more engagement</strong> — if you have a product image or banner, use it. Visuals significantly increase open and reply rates on WhatsApp.</li>
+      <li><strong>One template per use case</strong> — don't try to make one template cover every situation with lots of variables. Targeted, specific templates perform better and are easier to approve.</li>
+      <li><strong>Check quality rating</strong> — after sending, low quality scores (low opens, high blocks) can cause Meta to pause your template. Monitor customer feedback.</li>
+    </ul>
+  </section>
+
+  <!-- 9. Troubleshooting -->
+  <section id="troubleshooting">
+    <h2>9. Troubleshooting</h2>
+    <table>
+      <thead><tr><th>Problem</th><th>Solution</th></tr></thead>
+      <tbody>
+        <tr>
+          <td>Template not appearing in the list</td>
+          <td>Click <strong>Load</strong> in the Your Templates card. If still missing, check the business selector — templates are per WhatsApp number.</td>
+        </tr>
+        <tr>
+          <td>Submission fails with "Meta API error"</td>
+          <td>Check that the template name uses only lowercase letters, numbers, and underscores. Also verify the business's <code>access_token</code> has <code>whatsapp_business_management</code> scope.</td>
+        </tr>
+        <tr>
+          <td>Template rejected — "Variable parameters are not allowed"</td>
+          <td>Make sure your variables are numbered sequentially starting from 1: <code>{{1}}</code>, <code>{{2}}</code>, etc. Do not skip numbers.</td>
+        </tr>
+        <tr>
+          <td>No approval notification received</td>
+          <td>Ensure <code>message_template_status_update</code> is subscribed in Meta Webhook fields. Also run <code>supabase-migration-v6.sql</code> to create the notifications table.</td>
+        </tr>
+        <tr>
+          <td>Image not showing in broadcast</td>
+          <td>The image URL must be a publicly accessible HTTPS link. Test by opening the URL in an incognito browser tab. URLs from Supabase Assets Library are always public.</td>
+        </tr>
+        <tr>
+          <td>Delete button doesn't work</td>
+          <td>Confirm you have <code>whatsapp_business_management</code> permission on the access token. Some templates may also have a deletion cooldown period after approval.</td>
+        </tr>
+        <tr>
+          <td>Asset upload fails</td>
+          <td>Run <code>supabase-migration-v6.sql</code> in Supabase SQL Editor first to create the storage bucket. File must be under 10 MB.</td>
+        </tr>
+      </tbody>
+    </table>
+  </section>
+
+  <footer>
+    <p>LawAid AI WhatsApp Agent &mdash; Internal Guide &mdash; <a href="/index.html">← Back to Dashboard</a></p>
+  </footer>
+
+</div>
+</body>
+</html>
