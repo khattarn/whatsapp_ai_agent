@@ -1079,7 +1079,7 @@ document.querySelectorAll('.main-tab').forEach(tab => {
     else document.getElementById(`panel-${id}`).style.display = 'flex';
     if (id === 'broadcast') loadBroadcastHistory();
     if (id === 'templates') refreshTemplatesTab();
-    if (id === 'settings') renderSettings();
+    if (id === 'settings') loadBusinesses().then(renderSettings);
   });
 });
 
@@ -1470,7 +1470,8 @@ function renderSettings() {
     : `https://${hostname}/api/webhook`;
 
   const bizList = document.getElementById('settings-biz-list');
-  if (!state.businesses.length || state.businesses[0].id.startsWith('__')) {
+  const realBizs = state.businesses.filter(b => !b.id.startsWith('__'));
+  if (!realBizs.length) {
     bizList.innerHTML = '<p style="font-size:13px;color:var(--muted)">Businesses will appear here once Supabase is connected.</p>';
     return;
   }
@@ -1481,7 +1482,7 @@ function renderSettings() {
     none:   'Always suggest — agent reviews before sending',
   };
 
-  bizList.innerHTML = state.businesses.map(b => `
+  bizList.innerHTML = realBizs.map(b => `
     <div style="border:1px solid var(--border);border-radius:10px;padding:16px;margin-bottom:16px">
       <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
         <div style="width:14px;height:14px;border-radius:50%;background:${b.color}"></div>
@@ -1508,7 +1509,7 @@ function renderSettings() {
     </div>`).join('');
 
   // Update hint text live when dropdown changes
-  state.businesses.forEach(b => {
+  realBizs.forEach(b => {
     const sel = document.getElementById(`threshold-${b.id}`);
     if (sel) sel.addEventListener('change', () => {
       document.getElementById(`threshold-hint-${b.id}`).textContent = thresholdLabels[sel.value] || '';
