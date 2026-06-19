@@ -86,6 +86,8 @@ exports.handler = async (event) => {
     const firstErrors = [];
     const now = new Date().toISOString();
 
+    // Phase 1: send all WhatsApp messages sequentially (50ms gap for rate limiting)
+    const results = [];
     for (const contact of contacts) {
       try {
         const payload = buildPayload(campaign, contact);
@@ -93,44 +95,48 @@ exports.handler = async (event) => {
         const msgId = waRes.messages?.[0]?.id;
         const metaErr = waRes.error ? `${waRes.error.code}: ${waRes.error.message}` : null;
         const status = msgId ? 'sent' : 'failed';
-
         if (msgId) sent++;
         else {
           failed++;
           if (metaErr && firstErrors.length < 3) firstErrors.push({ phone: contact.phone, error: metaErr });
           console.error(`[broadcast-send] failed to ${contact.phone}:`, metaErr || JSON.stringify(waRes));
         }
-
-        await supabase.from('broadcast_recipients')
-          .update({ status, meta_message_id: msgId || null, error_message: metaErr, sent_at: now })
-          .eq('broadcast_id', broadcastId)
-          .eq('contact_id', contact.id);
-
-        // Log in open conversation if one exists
-        const { data: conv } = await supabase.from('conversations').select('id')
-          .eq('contact_id', contact.id).eq('business_id', businessId).eq('status', 'open').maybeSingle();
-        if (conv) {
-          await supabase.from('messages').insert({
-            conversation_id: conv.id,
-            from_phone: biz.phone_number_id,
-            to_phone: contact.phone,
-            content: displayMsg || campaign.message || campaign.templateName || '',
-            message_type: campaign.messageType === 'image' ? 'image' : campaign.messageType === 'video' ? 'video' : 'text',
-            direction: 'outbound',
-            sender_type: 'agent',
-            status,
-            meta_message_id: msgId || null,
-            media_url: campaign.mediaUrl || null,
-            timestamp: now,
-          });
-        }
-
-        await delay(200);
+        results.push({ contact, msgId, metaErr, status });
       } catch (err) {
         failed++;
+        results.push({ contact, msgId: null, metaErr: err.message, status: 'failed' });
         console.error(`[broadcast-send] error for ${contact.phone}:`, err.message);
       }
+      await delay(50);
     }
+
+    // Phase 2: flush DB writes in parallel so they don't add to wall-clock time
+    const contentText = displayMsg || campaign.message || campaign.templateName || '';
+    const msgType = campaign.messageType === 'image' ? 'image' : campaign.messageType === 'video' ? 'video' : 'text';
+    await Promise.all(results.map(async ({ contact, msgId, metaErr, status }) => {
+      await supabase.from('broadcast_recipients')
+        .update({ status, meta_message_id: msgId || null, error_message: metaErr, sent_at: now })
+        .eq('broadcast_id', broadcastId)
+        .eq('contact_id', contact.id);
+
+      const { data: conv } = await supabase.from('conversations').select('id')
+        .eq('contact_id', contact.id).eq('business_id', businessId).eq('status', 'open').maybeSingle();
+      if (conv) {
+        await supabase.from('messages').insert({
+          conversation_id: conv.id,
+          from_phone: biz.phone_number_id,
+          to_phone: contact.phone,
+          content: contentText,
+          message_type: msgType,
+          direction: 'outbound',
+          sender_type: 'agent',
+          status,
+          meta_message_id: msgId || null,
+          media_url: campaign.mediaUrl || null,
+          timestamp: now,
+        });
+      }
+    }));
 
     // On the last batch, finalize the broadcast record
     if (isFinal) {
