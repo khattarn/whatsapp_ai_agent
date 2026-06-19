@@ -1,0 +1,695 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>WhatsApp Agent — Master Guide</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --navy:   #0D1B3E;
+      --gold:   #C5A041;
+      --gold-l: #F5E9CC;
+      --bg:     #F8F9FB;
+      --card:   #FFFFFF;
+      --border: #E5E7EB;
+      --text:   #111827;
+      --muted:  #6B7280;
+      --green:  #059669;
+      --red:    #DC2626;
+      --blue:   #1D4ED8;
+      --sidebar-w: 280px;
+    }
+    html { scroll-behavior: smooth; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); line-height: 1.65; display: flex; min-height: 100vh; }
+
+    /* ═══ SIDEBAR ═══ */
+    #sidebar {
+      width: var(--sidebar-w);
+      min-width: var(--sidebar-w);
+      background: var(--navy);
+      color: #fff;
+      display: flex;
+      flex-direction: column;
+      position: fixed;
+      top: 0; left: 0; bottom: 0;
+      overflow-y: auto;
+      z-index: 100;
+      transition: left .28s ease;
+    }
+    .sb-logo { padding: 20px 20px 16px; border-bottom: 1px solid rgba(255,255,255,.1); }
+    .sb-logo h1 { font-size: 16px; font-weight: 700; color: #fff; line-height: 1.3; }
+    .sb-logo p  { font-size: 11px; color: var(--gold); margin-top: 2px; letter-spacing: .3px; }
+    .sb-back { display: block; margin: 12px 16px 0; padding: 6px 12px; background: rgba(255,255,255,.08); border-radius: 6px; font-size: 12px; color: rgba(255,255,255,.7); text-decoration: none; }
+    .sb-back:hover { background: rgba(255,255,255,.14); color: #fff; }
+
+    .sb-section { padding: 16px 0 4px; }
+    .sb-section-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: rgba(255,255,255,.35); padding: 0 20px 6px; }
+    .sb-link { display: flex; align-items: center; gap: 8px; padding: 8px 20px; font-size: 13px; color: rgba(255,255,255,.7); text-decoration: none; border-left: 3px solid transparent; transition: all .15s; }
+    .sb-link:hover   { color: #fff; background: rgba(255,255,255,.06); }
+    .sb-link.active  { color: #fff; background: rgba(197,160,65,.15); border-left-color: var(--gold); font-weight: 600; }
+    .sb-link .icon   { font-size: 15px; flex-shrink: 0; }
+    .sb-link .coming { font-size: 9px; background: rgba(255,255,255,.12); border-radius: 10px; padding: 1px 6px; color: rgba(255,255,255,.5); margin-left: auto; white-space: nowrap; }
+
+    /* ═══ MAIN ═══ */
+    #main { margin-left: var(--sidebar-w); flex: 1; min-width: 0; }
+
+    /* Top bar */
+    #topbar { background: #fff; border-bottom: 1px solid var(--border); padding: 14px 40px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 50; }
+    #topbar h2 { font-size: 15px; font-weight: 700; color: var(--navy); }
+    #topbar .breadcrumb { font-size: 12px; color: var(--muted); }
+    #hamburger { display: none; background: none; border: none; cursor: pointer; font-size: 22px; margin-right: 12px; }
+    #sidebar-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.45); z-index: 99; }
+
+    /* Content area */
+    #content { max-width: 820px; margin: 0 auto; padding: 40px 40px 100px; }
+
+    /* ═══ CHAPTER / SECTION STYLES ═══ */
+    .chapter { display: none; }
+    .chapter.active { display: block; }
+
+    .chapter-hero { background: var(--navy); color: #fff; border-radius: 12px; padding: 28px 32px; margin-bottom: 32px; }
+    .chapter-hero .ch-num  { font-size: 11px; font-weight: 700; letter-spacing: 1px; color: var(--gold); text-transform: uppercase; margin-bottom: 6px; }
+    .chapter-hero h1 { font-size: 26px; font-weight: 800; margin-bottom: 8px; }
+    .chapter-hero p  { font-size: 14px; color: rgba(255,255,255,.75); max-width: 560px; }
+
+    h2.section-title { font-size: 18px; font-weight: 700; border-left: 4px solid var(--gold); padding-left: 14px; margin: 36px 0 14px; }
+    h3.sub-title { font-size: 15px; font-weight: 700; margin: 24px 0 8px; color: var(--navy); }
+    p { font-size: 14px; margin-bottom: 12px; }
+    ul, ol { padding-left: 20px; margin-bottom: 14px; }
+    li { font-size: 14px; margin-bottom: 6px; }
+
+    /* Cards / callouts */
+    .card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 20px 24px; margin-bottom: 18px; }
+    .info   { background: #EFF6FF; border-left: 4px solid #3B82F6; border-radius: 8px; padding: 12px 16px; font-size: 13px; color: #1D4ED8; margin-bottom: 14px; }
+    .warn   { background: #FFFBEB; border-left: 4px solid #F59E0B; border-radius: 8px; padding: 12px 16px; font-size: 13px; color: #92400E; margin-bottom: 14px; }
+    .tip    { background: #F0FDF4; border-left: 4px solid #22C55E; border-radius: 8px; padding: 12px 16px; font-size: 13px; color: #166534; margin-bottom: 14px; }
+    .danger { background: #FEF2F2; border-left: 4px solid #EF4444; border-radius: 8px; padding: 12px 16px; font-size: 13px; color: #991B1B; margin-bottom: 14px; }
+
+    /* Steps */
+    .steps { margin: 16px 0; }
+    .step { display: flex; gap: 16px; margin-bottom: 18px; }
+    .step-num { width: 30px; height: 30px; border-radius: 50%; background: var(--gold); color: var(--navy); font-weight: 800; font-size: 13px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 3px; }
+    .step-body h4 { font-size: 14px; font-weight: 700; margin-bottom: 4px; }
+    .step-body p, .step-body ul { font-size: 13px; color: var(--muted); margin-bottom: 6px; }
+    .step-body ul { padding-left: 16px; }
+
+    /* Table */
+    table { width: 100%; border-collapse: collapse; font-size: 13px; margin-bottom: 18px; }
+    th { background: #F9FAFB; padding: 9px 12px; border: 1px solid var(--border); text-align: left; font-weight: 700; color: var(--muted); }
+    td { padding: 8px 12px; border: 1px solid var(--border); vertical-align: top; }
+    td:first-child { font-weight: 600; }
+    tr:nth-child(even) td { background: #FAFAFA; }
+
+    /* Status badges */
+    .status { display: inline-block; padding: 2px 9px; border-radius: 20px; font-size: 11px; font-weight: 700; }
+    .status.approved { background: #DCFCE7; color: #166534; }
+    .status.pending  { background: #FEF9C3; color: #854D0E; }
+    .status.rejected { background: #FEE2E2; color: #991B1B; }
+    .status.paused   { background: #F3F4F6; color: #6B7280; }
+
+    code { background: #F3F4F6; padding: 1px 6px; border-radius: 4px; font-size: 12px; font-family: 'SFMono-Regular', Consolas, monospace; }
+    pre  { background: #1E293B; color: #E2E8F0; border-radius: 8px; padding: 16px; overflow-x: auto; font-size: 12px; margin-bottom: 14px; line-height: 1.6; }
+
+    /* Coming soon chapter */
+    .coming-soon { text-align: center; padding: 80px 20px; }
+    .coming-soon .cs-icon { font-size: 64px; margin-bottom: 20px; opacity: .4; }
+    .coming-soon h2 { font-size: 22px; font-weight: 700; color: var(--muted); margin-bottom: 8px; }
+    .coming-soon p  { font-size: 14px; color: var(--muted); }
+
+    /* Home chapter feature grid */
+    .feature-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 14px; margin: 20px 0; }
+    .feature-card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 18px; cursor: pointer; transition: all .15s; text-decoration: none; color: var(--text); }
+    .feature-card:hover { border-color: var(--gold); box-shadow: 0 4px 12px rgba(197,160,65,.15); transform: translateY(-1px); }
+    .feature-card .fc-icon { font-size: 28px; margin-bottom: 10px; }
+    .feature-card h3 { font-size: 14px; font-weight: 700; margin-bottom: 4px; }
+    .feature-card p  { font-size: 12px; color: var(--muted); margin: 0; }
+    .feature-card .fc-badge { display: inline-block; margin-top: 8px; font-size: 10px; padding: 2px 7px; border-radius: 10px; background: var(--gold-l); color: #92400E; font-weight: 700; }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      #sidebar { left: calc(0px - var(--sidebar-w)); }
+      #sidebar.open { left: 0; box-shadow: 4px 0 24px rgba(0,0,0,.3); }
+      #sidebar-overlay.show { display: block; }
+      #main { margin-left: 0; }
+      #hamburger { display: block; }
+      #topbar { padding: 12px 16px; }
+      #content { padding: 24px 16px 80px; }
+      .chapter-hero { padding: 20px; }
+      .chapter-hero h1 { font-size: 20px; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ═══ SIDEBAR ═══ -->
+<nav id="sidebar">
+  <div class="sb-logo">
+    <h1>📱 WhatsApp Agent</h1>
+    <p>Master Guide — LawAid AI &amp; Garment Retail</p>
+  </div>
+  <a href="/index.html" class="sb-back">← Back to Dashboard</a>
+
+  <div class="sb-section">
+    <div class="sb-section-label">Getting Started</div>
+    <a class="sb-link active" data-chapter="home" href="#home">
+      <span class="icon">🏠</span> Overview
+    </a>
+    <a class="sb-link" data-chapter="setup" href="#setup">
+      <span class="icon">⚙️</span> Setup &amp; Configuration
+    </a>
+  </div>
+
+  <div class="sb-section">
+    <div class="sb-section-label">Daily Operations</div>
+    <a class="sb-link" data-chapter="inbox" href="#inbox">
+      <span class="icon">📥</span> Inbox &amp; Conversations
+      <span class="coming">Coming soon</span>
+    </a>
+    <a class="sb-link" data-chapter="contacts" href="#contacts">
+      <span class="icon">👥</span> Contacts
+      <span class="coming">Coming soon</span>
+    </a>
+    <a class="sb-link" data-chapter="broadcasts" href="#broadcasts">
+      <span class="icon">📢</span> Broadcasts
+      <span class="coming">Coming soon</span>
+    </a>
+  </div>
+
+  <div class="sb-section">
+    <div class="sb-section-label">Templates</div>
+    <a class="sb-link" data-chapter="assets" href="#assets">
+      <span class="icon">🖼️</span> Assets Library
+    </a>
+    <a class="sb-link" data-chapter="templates" href="#templates">
+      <span class="icon">📋</span> Template Management
+    </a>
+  </div>
+
+  <div class="sb-section">
+    <div class="sb-section-label">Products &amp; Businesses</div>
+    <a class="sb-link" data-chapter="legalaid" href="#legalaid">
+      <span class="icon">⚖️</span> LawAid AI / Nyaya Saathi
+      <span class="coming">Coming soon</span>
+    </a>
+    <a class="sb-link" data-chapter="garment" href="#garment">
+      <span class="icon">👗</span> Garment Retail
+      <span class="coming">Coming soon</span>
+    </a>
+  </div>
+</nav>
+
+<div id="sidebar-overlay"></div>
+
+<!-- ═══ MAIN ═══ -->
+<div id="main">
+
+  <!-- Top bar -->
+  <div id="topbar">
+    <div style="display:flex;align-items:center;gap:4px">
+      <button id="hamburger">☰</button>
+      <span class="breadcrumb" id="breadcrumb">Master Guide</span>
+    </div>
+    <span id="topbar-title" style="font-size:13px;font-weight:600;color:var(--navy)"></span>
+  </div>
+
+  <div id="content">
+
+    <!-- ══════════════════════════════════════════ -->
+    <!-- CHAPTER: HOME                             -->
+    <!-- ══════════════════════════════════════════ -->
+    <div class="chapter active" id="ch-home">
+      <div class="chapter-hero">
+        <div class="ch-num">Master Guide</div>
+        <h1>WhatsApp Agent</h1>
+        <p>Everything you need to run, manage, and grow your WhatsApp customer communications for LawAid AI and Garment Retail.</p>
+      </div>
+
+      <h2 class="section-title">What this app does</h2>
+      <p>The WhatsApp Agent is a multi-business customer service platform that connects your WhatsApp numbers to an AI-powered inbox. Incoming messages are automatically routed, AI suggests or auto-sends replies, and you can run broadcast campaigns to your contacts — all from one dashboard.</p>
+
+      <div class="feature-grid">
+        <a class="feature-card" data-chapter="inbox" href="#inbox">
+          <div class="fc-icon">📥</div>
+          <h3>Inbox</h3>
+          <p>Read and reply to customer messages. AI drafts responses for agent review.</p>
+          <span class="fc-badge">Coming soon</span>
+        </a>
+        <a class="feature-card" data-chapter="contacts" href="#contacts">
+          <div class="fc-icon">👥</div>
+          <h3>Contacts</h3>
+          <p>Import contacts from CSV, tag them, and manage opt-in status.</p>
+          <span class="fc-badge">Coming soon</span>
+        </a>
+        <a class="feature-card" data-chapter="broadcasts" href="#broadcasts">
+          <div class="fc-icon">📢</div>
+          <h3>Broadcasts</h3>
+          <p>Send campaigns to all opted-in contacts or filter by tag.</p>
+          <span class="fc-badge">Coming soon</span>
+        </a>
+        <a class="feature-card" data-chapter="assets" href="#assets">
+          <div class="fc-icon">🖼️</div>
+          <h3>Assets Library</h3>
+          <p>Upload images and media. Get permanent public URLs for templates and broadcasts.</p>
+        </a>
+        <a class="feature-card" data-chapter="templates" href="#templates">
+          <div class="fc-icon">📋</div>
+          <h3>Templates</h3>
+          <p>Create and submit WhatsApp message templates for Meta approval.</p>
+        </a>
+        <a class="feature-card" data-chapter="setup" href="#setup">
+          <div class="fc-icon">⚙️</div>
+          <h3>Settings</h3>
+          <p>Configure businesses, AI behaviour, environment variables, and webhook URL.</p>
+        </a>
+      </div>
+
+      <h2 class="section-title">Two businesses, one dashboard</h2>
+      <table>
+        <thead><tr><th>Business</th><th>WhatsApp Number</th><th>AI Mode</th><th>Notes</th></tr></thead>
+        <tbody>
+          <tr><td>⚖️ LawAid AI</td><td>Configured in Supabase</td><td>Legal Aid session bot</td><td>Multilingual (EN / HI / MR), stateful menus, eCourts, research, drafting</td></tr>
+          <tr><td>👗 Garment Retail</td><td>Configured in Supabase</td><td>Hybrid (AI + human)</td><td>Claude auto-replies FAQs; complex queries flagged for human agent</td></tr>
+        </tbody>
+      </table>
+
+      <h2 class="section-title">Tech stack at a glance</h2>
+      <table>
+        <thead><tr><th>Layer</th><th>Technology</th></tr></thead>
+        <tbody>
+          <tr><td>Hosting</td><td>Netlify (static frontend + serverless functions)</td></tr>
+          <tr><td>Database</td><td>Supabase (PostgreSQL + Storage)</td></tr>
+          <tr><td>AI</td><td>Anthropic Claude — Opus 4.6 for conversations, Haiku 4.5 for unregistered legal queries</td></tr>
+          <tr><td>Messaging</td><td>Meta WhatsApp Cloud API (Graph API v19.0)</td></tr>
+          <tr><td>Frontend</td><td>Vanilla HTML / JS single-page app — no framework</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- ══════════════════════════════════════════ -->
+    <!-- CHAPTER: SETUP                            -->
+    <!-- ══════════════════════════════════════════ -->
+    <div class="chapter" id="ch-setup">
+      <div class="chapter-hero">
+        <div class="ch-num">Chapter 1</div>
+        <h1>Setup &amp; Configuration</h1>
+        <p>Environment variables, webhook registration, and Supabase schema setup.</p>
+      </div>
+
+      <h2 class="section-title">Environment Variables</h2>
+      <p>Set these in <strong>Netlify → Project Configuration → Environment Variables</strong>:</p>
+      <table>
+        <thead><tr><th>Variable</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><code>SUPABASE_URL</code></td><td>Your Supabase project URL</td></tr>
+          <tr><td><code>SUPABASE_SERVICE_KEY</code></td><td>Supabase service role secret key</td></tr>
+          <tr><td><code>ANTHROPIC_API_KEY</code></td><td>Anthropic Claude API key</td></tr>
+          <tr><td><code>WEBHOOK_VERIFY_TOKEN</code></td><td>Any secret string — used to verify Meta webhook handshake</td></tr>
+          <tr><td><code>LEGAL_AID_GATEWAY_URL</code></td><td>URL of the Nyaya Saathi gateway service</td></tr>
+          <tr><td><code>WHATSAPP_SERVICE_SECRET</code></td><td>Shared secret for gateway service authentication</td></tr>
+        </tbody>
+      </table>
+
+      <h2 class="section-title">Database Migrations</h2>
+      <p>Run these SQL files in order in <strong>Supabase → SQL Editor</strong>:</p>
+      <table>
+        <thead><tr><th>File</th><th>What it creates</th></tr></thead>
+        <tbody>
+          <tr><td><code>supabase-schema.sql</code></td><td>Core tables: businesses, contacts, conversations, messages, broadcasts, broadcast_recipients</td></tr>
+          <tr><td><code>supabase-migration-v2.sql</code></td><td>Additional fields and indexes</td></tr>
+          <tr><td><code>supabase-migration-v3.sql</code></td><td>Session data + advocate tables</td></tr>
+          <tr><td><code>supabase-migration-v4.sql</code></td><td>WA message events</td></tr>
+          <tr><td><code>supabase-migration-v5.sql</code></td><td>AI threshold + service mode fields</td></tr>
+          <tr><td><code>supabase-migration-v6.sql</code></td><td>Assets storage bucket + template_notifications table</td></tr>
+        </tbody>
+      </table>
+
+      <h2 class="section-title">Registering the Webhook with Meta</h2>
+      <div class="steps">
+        <div class="step"><div class="step-num">1</div><div class="step-body"><h4>Find your webhook URL</h4><p>Open the app → Settings tab. The URL is shown under <em>Webhook URL</em>. It looks like: <code>https://your-site.netlify.app/api/webhook</code></p></div></div>
+        <div class="step"><div class="step-num">2</div><div class="step-body"><h4>Register in Meta Business Manager</h4><p>Go to <strong>business.facebook.com → WhatsApp Manager → Configuration</strong>. Paste the URL and your <code>WEBHOOK_VERIFY_TOKEN</code>.</p></div></div>
+        <div class="step"><div class="step-num">3</div><div class="step-body"><h4>Subscribe to webhook fields</h4><p>Enable: <code>messages</code>, <code>message_template_status_update</code>. The first delivers incoming messages; the second delivers template approval notifications.</p></div></div>
+      </div>
+
+      <h2 class="section-title">Adding a Business</h2>
+      <p>Each WhatsApp number is a row in the <code>businesses</code> table in Supabase. Add or edit rows directly via <strong>Supabase → Table editor → businesses</strong>.</p>
+      <table>
+        <thead><tr><th>Column</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><code>name</code></td><td>Display name shown in dashboard tabs</td></tr>
+          <tr><td><code>phone_number_id</code></td><td>Meta WhatsApp Phone Number ID (from Meta Developer Portal)</td></tr>
+          <tr><td><code>waba_id</code></td><td>WhatsApp Business Account ID — needed for template management</td></tr>
+          <tr><td><code>access_token</code></td><td>Meta System User permanent token. Must have <code>whatsapp_business_messaging</code> AND <code>whatsapp_business_management</code> scopes.</td></tr>
+          <tr><td><code>system_prompt</code></td><td>Claude personality for this business</td></tr>
+          <tr><td><code>ai_auto_threshold</code></td><td><code>all</code> — Claude replies to everything non-complex; <code>simple</code> — FAQ only; <code>none</code> — human only</td></tr>
+          <tr><td><code>service_mode</code></td><td><code>legal_aid</code> for Nyaya Saathi session bot; omit/null for hybrid mode</td></tr>
+          <tr><td><code>color</code></td><td>Hex accent colour shown in the dashboard</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- ══════════════════════════════════════════ -->
+    <!-- CHAPTER: INBOX (coming soon)              -->
+    <!-- ══════════════════════════════════════════ -->
+    <div class="chapter" id="ch-inbox">
+      <div class="chapter-hero">
+        <div class="ch-num">Coming Soon</div>
+        <h1>Inbox &amp; Conversations</h1>
+        <p>Replying to customers, AI suggestions, resolving threads, and toggling AI per conversation.</p>
+      </div>
+      <div class="coming-soon">
+        <div class="cs-icon">📥</div>
+        <h2>Guide coming soon</h2>
+        <p>This chapter will cover the Inbox tab, message bubbles, AI suggestion approval, and conversation management.</p>
+      </div>
+    </div>
+
+    <!-- ══════════════════════════════════════════ -->
+    <!-- CHAPTER: CONTACTS (coming soon)           -->
+    <!-- ══════════════════════════════════════════ -->
+    <div class="chapter" id="ch-contacts">
+      <div class="chapter-hero">
+        <div class="ch-num">Coming Soon</div>
+        <h1>Contacts</h1>
+        <p>Importing contacts from CSV, tagging, filtering, and managing opt-in status.</p>
+      </div>
+      <div class="coming-soon">
+        <div class="cs-icon">👥</div>
+        <h2>Guide coming soon</h2>
+        <p>This chapter will cover CSV import, the contacts table, tags, and opt-in/opt-out management.</p>
+      </div>
+    </div>
+
+    <!-- ══════════════════════════════════════════ -->
+    <!-- CHAPTER: BROADCASTS (coming soon)         -->
+    <!-- ══════════════════════════════════════════ -->
+    <div class="chapter" id="ch-broadcasts">
+      <div class="chapter-hero">
+        <div class="ch-num">Coming Soon</div>
+        <h1>Broadcasts</h1>
+        <p>Sending campaigns, personalisation variables, message types, and campaign history.</p>
+      </div>
+      <div class="coming-soon">
+        <div class="cs-icon">📢</div>
+        <h2>Guide coming soon</h2>
+        <p>This chapter will cover creating broadcast campaigns, message types (text, template, image, video), personalisation, and reviewing campaign results.</p>
+      </div>
+    </div>
+
+    <!-- ══════════════════════════════════════════ -->
+    <!-- CHAPTER: ASSETS LIBRARY                   -->
+    <!-- ══════════════════════════════════════════ -->
+    <div class="chapter" id="ch-assets">
+      <div class="chapter-hero">
+        <div class="ch-num">Chapter 5</div>
+        <h1>Assets Library</h1>
+        <p>Upload images, videos, and documents to cloud storage. Get permanent public URLs for use in template headers and broadcast campaigns.</p>
+      </div>
+
+      <h2 class="section-title">What is the Assets Library?</h2>
+      <p>The Assets Library is a media store built on <strong>Supabase Storage</strong>. Every file you upload gets a permanent, publicly accessible HTTPS URL — exactly what WhatsApp requires for template headers and broadcast media attachments.</p>
+      <p>Files are organised per business, so Garment Retail and LawAid AI each have their own separate asset folders.</p>
+
+      <div class="tip"><strong>When do you need this?</strong> Any time you create a template with an Image, Video, or Document header, or send a broadcast with a media attachment — you need a public URL. Upload it here first.</div>
+
+      <h2 class="section-title">Supported File Types</h2>
+      <table>
+        <thead><tr><th>Type</th><th>Formats</th><th>Recommended size</th><th>Max</th></tr></thead>
+        <tbody>
+          <tr><td>🖼️ Image</td><td>JPEG, PNG, GIF, WebP</td><td>800 × 418 px (1.91:1 ratio)</td><td>10 MB</td></tr>
+          <tr><td>🎬 Video</td><td>MP4</td><td>Under 16 MB for best delivery</td><td>10 MB</td></tr>
+          <tr><td>📄 Document</td><td>PDF</td><td>Any size</td><td>10 MB</td></tr>
+        </tbody>
+      </table>
+
+      <h2 class="section-title">Uploading a File</h2>
+      <div class="steps">
+        <div class="step"><div class="step-num">1</div><div class="step-body"><h4>Open the Templates tab</h4><p>Click <strong>📋 Templates</strong> in the top navigation. The Assets Library card is at the top of the page.</p></div></div>
+        <div class="step"><div class="step-num">2</div><div class="step-body"><h4>Select your business</h4><p>Use the Business dropdown in the Assets Library card. This determines which business folder the file is stored under.</p></div></div>
+        <div class="step"><div class="step-num">3</div><div class="step-body"><h4>Upload the file</h4><p>Drag and drop the file onto the upload zone, or click to browse. Multiple files can be uploaded at once. A progress indicator shows each file uploading.</p></div></div>
+        <div class="step"><div class="step-num">4</div><div class="step-body"><h4>Copy the public URL</h4><p>The file appears in the gallery below the upload zone. Click <strong>📋 Copy URL</strong> on the asset card. The URL is now in your clipboard — ready to paste into a template header or broadcast.</p></div></div>
+      </div>
+
+      <h2 class="section-title">Deleting an Asset</h2>
+      <p>Click the <strong>🗑</strong> button on any asset card. You will be asked to confirm. Deletion is permanent — any template or broadcast that referenced the URL will no longer display the image.</p>
+      <div class="danger"><strong>Before deleting</strong> — check that no live approved template or active broadcast references this asset URL. WhatsApp will show a broken media placeholder to customers.</div>
+
+      <h2 class="section-title">Using an Asset in a Template</h2>
+      <p>In the <strong>Create New Template</strong> form, set Header Type to <strong>🖼️ Image</strong> (or Video/Document). A URL field and <strong>📁 Browse Assets</strong> button appear. Click Browse Assets to open a picker showing your uploaded files — click <strong>✔ Use</strong> to auto-fill the URL.</p>
+
+      <h2 class="section-title">Using an Asset in a Broadcast</h2>
+      <p>In the Broadcasts tab, select <strong>🖼️ Image</strong> or <strong>🎬 Video</strong> as the message type. Paste the asset URL from your clipboard into the <em>Media URL</em> field.</p>
+
+      <div class="warn"><strong>Image best practices for WhatsApp:</strong> Use 800 × 418 px JPEG at 72 dpi. Keep file size under 500 KB for fastest delivery. Avoid text-heavy images — WhatsApp compresses them aggressively.</div>
+    </div>
+
+    <!-- ══════════════════════════════════════════ -->
+    <!-- CHAPTER: TEMPLATES                        -->
+    <!-- ══════════════════════════════════════════ -->
+    <div class="chapter" id="ch-templates">
+      <div class="chapter-hero">
+        <div class="ch-num">Chapter 6</div>
+        <h1>Template Management</h1>
+        <p>Create, submit, and manage WhatsApp message templates. Templates are required for reaching customers outside the 24-hour messaging window.</p>
+      </div>
+
+      <h2 class="section-title">Overview</h2>
+      <p>WhatsApp <strong>message templates</strong> are pre-approved message formats that allow you to contact customers <strong>outside the 24-hour messaging window</strong> — essential for broadcast campaigns, appointment reminders, and order updates.</p>
+      <p>All templates must be reviewed and approved by Meta before use. This dashboard lets you create, manage, and monitor that entire process without leaving the app.</p>
+
+      <table>
+        <thead><tr><th>Message Type</th><th>When it works</th><th>Needs Meta Approval?</th></tr></thead>
+        <tbody>
+          <tr><td>Free-form text</td><td>Within 24 hrs of customer's last message</td><td>No</td></tr>
+          <tr><td>Template</td><td>Any time — even after 24 hrs</td><td>Yes</td></tr>
+        </tbody>
+      </table>
+
+      <h2 class="section-title">Creating a Template</h2>
+      <p>Open the <strong>📋 Templates</strong> tab and fill in the Create New Template form.</p>
+
+      <div class="steps">
+        <div class="step"><div class="step-num">1</div><div class="step-body"><h4>Business <span style="color:var(--red)">*</span></h4><p>Choose which WhatsApp number this template belongs to.</p></div></div>
+        <div class="step"><div class="step-num">2</div><div class="step-body">
+          <h4>Template Name <span style="color:var(--red)">*</span></h4>
+          <p>Lowercase letters, numbers, and underscores only. <strong>Permanent after submission.</strong></p>
+          <p>Examples: <code>summer_sale_2026</code> · <code>appointment_reminder</code> · <code>order_shipped</code></p>
+        </div></div>
+        <div class="step"><div class="step-num">3</div><div class="step-body">
+          <h4>Category <span style="color:var(--red)">*</span></h4>
+          <ul>
+            <li><strong>📣 Marketing</strong> — promotions, offers, newsletters</li>
+            <li><strong>🔧 Utility</strong> — order updates, reminders, account alerts (lower cost)</li>
+            <li><strong>🔐 Authentication</strong> — OTPs and verification codes</li>
+          </ul>
+        </div></div>
+        <div class="step"><div class="step-num">4</div><div class="step-body"><h4>Language <span style="color:var(--red)">*</span></h4><p>English (US/GB), Hindi, or Marathi. Submit separate templates for each language you need.</p></div></div>
+        <div class="step"><div class="step-num">5</div><div class="step-body">
+          <h4>Header (optional)</h4>
+          <ul>
+            <li><strong>None</strong> — text body only</li>
+            <li><strong>📝 Text</strong> — bold title, max 60 chars. Use <code>{{1}}</code> for one variable.</li>
+            <li><strong>🖼️ Image / 🎬 Video / 📄 Document</strong> — paste URL from Assets Library or click Browse Assets. The file is sent at broadcast time.</li>
+          </ul>
+        </div></div>
+        <div class="step"><div class="step-num">6</div><div class="step-body">
+          <h4>Body <span style="color:var(--red)">*</span></h4>
+          <p>Main message text, max 1024 chars. Personalise with <code>{{1}}</code>, <code>{{2}}</code>, etc.</p>
+          <p>Example: <em>Hi {{1}}, your order {{2}} has been dispatched and will arrive by {{3}}.</em></p>
+          <p>When you use variables, <strong>Example value</strong> inputs appear automatically. Fill them in — Meta uses these to review your template.</p>
+        </div></div>
+        <div class="step"><div class="step-num">7</div><div class="step-body"><h4>Footer (optional)</h4><p>Short grey text below body, max 60 chars. No variables. Commonly used for opt-out notice: <em>"Reply STOP to unsubscribe"</em>.</p></div></div>
+        <div class="step"><div class="step-num">8</div><div class="step-body">
+          <h4>Buttons (optional)</h4>
+          <p>Up to 3 buttons. Types:</p>
+          <ul>
+            <li><strong>💬 Quick Reply</strong> — customer taps to send a preset reply</li>
+            <li><strong>🔗 URL</strong> — opens a link. Append <code>{{1}}</code> at the end for a dynamic suffix</li>
+            <li><strong>📞 Phone</strong> — dials a number. Format: <code>+919876543210</code></li>
+          </ul>
+          <div class="warn" style="margin-top:6px">Do not mix Quick Reply and CTA (URL/Phone) buttons in the same template.</div>
+        </div></div>
+        <div class="step"><div class="step-num">9</div><div class="step-body"><h4>Submit</h4><p>Click <strong>📤 Submit for Meta Approval</strong>. The template status will be <span class="status pending">PENDING</span>. Meta typically reviews within minutes to a few hours.</p></div></div>
+      </div>
+
+      <h2 class="section-title">Field Reference</h2>
+      <table>
+        <thead><tr><th>Field</th><th>Required</th><th>Notes</th></tr></thead>
+        <tbody>
+          <tr><td>Business</td><td>Yes</td><td>Determines which WhatsApp number the template belongs to</td></tr>
+          <tr><td>Template Name</td><td>Yes</td><td>Lowercase, underscores only. Permanent after submission.</td></tr>
+          <tr><td>Category</td><td>Yes</td><td><code>MARKETING</code> · <code>UTILITY</code> · <code>AUTHENTICATION</code></td></tr>
+          <tr><td>Language</td><td>Yes</td><td><code>en_US</code> · <code>en</code> · <code>hi</code> · <code>mr</code> · <code>en_GB</code></td></tr>
+          <tr><td>Header Type</td><td>No</td><td>NONE · TEXT · IMAGE · VIDEO · DOCUMENT</td></tr>
+          <tr><td>Header Text</td><td>If TEXT header</td><td>Max 60 chars. One variable (<code>{{1}}</code>) allowed.</td></tr>
+          <tr><td>Header Media URL</td><td>No</td><td>Public HTTPS URL. File is sent at broadcast time.</td></tr>
+          <tr><td>Body Text</td><td>Yes</td><td>Max 1024 chars. Variables: <code>{{1}}</code>, <code>{{2}}</code>, …</td></tr>
+          <tr><td>Body Variable Examples</td><td>If variables used</td><td>Required by Meta. Appear automatically in the form.</td></tr>
+          <tr><td>Footer</td><td>No</td><td>Max 60 chars. No variables.</td></tr>
+          <tr><td>Buttons</td><td>No</td><td>Up to 3 Quick Reply OR up to 2 CTA. Not mixed.</td></tr>
+        </tbody>
+      </table>
+
+      <h2 class="section-title">Approval &amp; Notifications</h2>
+
+      <h3 class="sub-title">Approval statuses</h3>
+      <table>
+        <thead><tr><th>Status</th><th>Meaning</th></tr></thead>
+        <tbody>
+          <tr><td><span class="status pending">PENDING</span></td><td>Submitted and awaiting Meta review. Usually resolves in minutes to a few hours.</td></tr>
+          <tr><td><span class="status approved">APPROVED</span></td><td>Ready to use in Broadcasts.</td></tr>
+          <tr><td><span class="status rejected">REJECTED</span></td><td>Not approved. Rejection reason is shown in the notification banner and template list.</td></tr>
+          <tr><td><span class="status paused">PAUSED</span></td><td>Paused by Meta due to low engagement or quality issues. Cannot be sent until re-enabled.</td></tr>
+        </tbody>
+      </table>
+
+      <h3 class="sub-title">How notifications work</h3>
+      <p>When Meta approves or rejects a template, it sends a webhook event to <code>/api/webhook</code>. The app captures this and displays a <strong>notification banner</strong> at the top of the Templates tab the next time you open it.</p>
+      <ul>
+        <li>✅ Green banner — <strong>APPROVED</strong>, template is ready to use</li>
+        <li>❌ Red banner — <strong>REJECTED</strong>, reason is shown in the banner</li>
+      </ul>
+      <p>Dismiss each banner by clicking <strong>✕</strong>.</p>
+
+      <div class="info"><strong>Prerequisite for notifications:</strong> Subscribe to the <code>message_template_status_update</code> webhook field in Meta Business Manager → WhatsApp Manager → Configuration → Webhook fields.</div>
+
+      <h3 class="sub-title">If your template is rejected</h3>
+      <ul>
+        <li>Read the rejection reason in the notification banner or template list card</li>
+        <li>Common reasons: promotional language in a Utility template, vague body text, missing opt-out in Marketing templates, sequential variable numbers skipped</li>
+        <li>Delete the rejected template, fix the issue, and resubmit (you can reuse the same name)</li>
+      </ul>
+
+      <h2 class="section-title">Viewing &amp; Deleting Templates</h2>
+      <p>The <strong>Your Templates</strong> card at the bottom of the Templates tab shows all templates for the selected business, live from Meta's API.</p>
+      <ul>
+        <li>Use the status filter to show only Approved, Pending, or Rejected templates</li>
+        <li>Each card shows the template name, status, category, language, header, body preview, footer, and buttons</li>
+        <li>Click <strong>🗑 Delete</strong> to remove a template. Deletion is permanent — approved templates that have been sent will stop working immediately</li>
+      </ul>
+
+      <h2 class="section-title">Using Approved Templates in Broadcasts</h2>
+      <div class="steps">
+        <div class="step"><div class="step-num">1</div><div class="step-body"><h4>Go to 📢 Broadcasts</h4><p>Click the Broadcasts tab in the top navigation.</p></div></div>
+        <div class="step"><div class="step-num">2</div><div class="step-body"><h4>Select Message Type → Template</h4><p>Click the <strong>📋 Template</strong> card in the Message Type row.</p></div></div>
+        <div class="step"><div class="step-num">3</div><div class="step-body"><h4>Enter the exact template name</h4><p>Type the name exactly as submitted (e.g. <code>summer_sale_2026</code>). Case-sensitive.</p></div></div>
+        <div class="step"><div class="step-num">4</div><div class="step-body">
+          <h4>Fill in variables and media</h4>
+          <p>Add body variable values. Use personalisation tokens:</p>
+          <ul>
+            <li><code>{name}</code> → contact's full name</li>
+            <li><code>{first_name}</code> → first word of name</li>
+            <li><code>{phone}</code> → contact's phone number</li>
+          </ul>
+          <p>If your template has an image/video header, paste the URL from Assets Library into the Media URL field.</p>
+        </div></div>
+        <div class="step"><div class="step-num">5</div><div class="step-body"><h4>Select recipients and send</h4><p>Choose all opted-in contacts or filter by tag, then click <strong>📤 Send Campaign</strong>.</p></div></div>
+      </div>
+
+      <h2 class="section-title">Tips &amp; Best Practices</h2>
+      <ul>
+        <li><strong>Utility vs Marketing:</strong> Use Utility for transactional messages (order updates, reminders). It's cheaper per message and approves faster.</li>
+        <li><strong>Opt-out for Marketing:</strong> Always add a footer like <em>"Reply STOP to unsubscribe"</em> or a Quick Reply button. Meta requires it.</li>
+        <li><strong>Specific body text:</strong> Vague messages like "Check this out!" are often rejected. Be clear about what you're communicating.</li>
+        <li><strong>Realistic example values:</strong> When your body has <code>{{1}}</code>, fill in a realistic example like <em>"Priya Sharma"</em> not <em>"Example1"</em> — better examples lead to faster approvals.</li>
+        <li><strong>Sequential variables:</strong> Always use <code>{{1}}</code>, <code>{{2}}</code>, <code>{{3}}</code> in order. Do not skip numbers.</li>
+        <li><strong>Image headers:</strong> Visuals significantly increase engagement. Use 800 × 418 px JPEG from the Assets Library.</li>
+      </ul>
+
+      <h2 class="section-title">Troubleshooting</h2>
+      <table>
+        <thead><tr><th>Problem</th><th>Solution</th></tr></thead>
+        <tbody>
+          <tr><td>Template not in list</td><td>Click Load in the Your Templates card. Check the business selector.</td></tr>
+          <tr><td>Submission fails — Meta API error</td><td>Verify template name uses only lowercase letters, numbers, underscores. Check that the access token has <code>whatsapp_business_management</code> scope and that <code>waba_id</code> is set in Supabase.</td></tr>
+          <tr><td>Rejected — variable parameters not allowed</td><td>Ensure variables are numbered sequentially from 1. No skipping.</td></tr>
+          <tr><td>No approval notification</td><td>Subscribe to <code>message_template_status_update</code> in Meta webhook fields. Confirm <code>supabase-migration-v6.sql</code> has been run.</td></tr>
+          <tr><td>Image not displaying in broadcast</td><td>URL must be a publicly accessible HTTPS link. Test in an incognito browser tab. URLs from Assets Library are always public.</td></tr>
+          <tr><td>Asset upload fails</td><td>Run <code>supabase-migration-v6.sql</code> to create the storage bucket. File must be under 10 MB.</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- ══════════════════════════════════════════ -->
+    <!-- CHAPTER: LEGALAID (coming soon)           -->
+    <!-- ══════════════════════════════════════════ -->
+    <div class="chapter" id="ch-legalaid">
+      <div class="chapter-hero">
+        <div class="ch-num">Coming Soon</div>
+        <h1>LawAid AI / Nyaya Saathi</h1>
+        <p>The multilingual legal assistant session bot — flows, states, advocate management, and eCourts integration.</p>
+      </div>
+      <div class="coming-soon">
+        <div class="cs-icon">⚖️</div>
+        <h2>Guide coming soon</h2>
+        <p>This chapter will cover the Nyaya Saathi session state machine, language selection, legal research, eCourts case status, document drafting, and advocate management.</p>
+      </div>
+    </div>
+
+    <!-- ══════════════════════════════════════════ -->
+    <!-- CHAPTER: GARMENT (coming soon)            -->
+    <!-- ══════════════════════════════════════════ -->
+    <div class="chapter" id="ch-garment">
+      <div class="chapter-hero">
+        <div class="ch-num">Coming Soon</div>
+        <h1>Garment Retail</h1>
+        <p>Hybrid AI + human mode, FAQ routing, product catalogue, and order management.</p>
+      </div>
+      <div class="coming-soon">
+        <div class="cs-icon">👗</div>
+        <h2>Guide coming soon</h2>
+        <p>This chapter will cover AI threshold configuration, system prompt customisation, and the garment retail customer service workflow.</p>
+      </div>
+    </div>
+
+  </div><!-- /content -->
+</div><!-- /main -->
+
+<script>
+  const links = document.querySelectorAll('.sb-link[data-chapter]');
+  const chapters = document.querySelectorAll('.chapter');
+
+  function showChapter(id) {
+    chapters.forEach(c => c.classList.remove('active'));
+    links.forEach(l => l.classList.remove('active'));
+    const ch = document.getElementById('ch-' + id);
+    const lk = document.querySelector(`.sb-link[data-chapter="${id}"]`);
+    if (ch) ch.classList.add('active');
+    if (lk) lk.classList.add('active');
+    // Update topbar
+    const title = lk ? lk.querySelector(':not(.icon):not(.coming)')?.textContent?.trim() : '';
+    document.getElementById('topbar-title').textContent = title || '';
+    document.getElementById('breadcrumb').textContent = 'Master Guide' + (title ? ' › ' + title : '');
+    window.scrollTo(0, 0);
+    if (window.innerWidth <= 768) closeSidebar();
+  }
+
+  links.forEach(link => {
+    link.addEventListener('click', e => {
+      e.preventDefault();
+      showChapter(link.dataset.chapter);
+    });
+  });
+
+  // Feature card clicks (home chapter)
+  document.querySelectorAll('.feature-card[data-chapter]').forEach(card => {
+    card.addEventListener('click', e => {
+      e.preventDefault();
+      showChapter(card.dataset.chapter);
+    });
+  });
+
+  // Mobile sidebar
+  const sidebar = document.getElementById('sidebar');
+  const overlay = document.getElementById('sidebar-overlay');
+  function openSidebar()  { sidebar.classList.add('open');  overlay.classList.add('show'); }
+  function closeSidebar() { sidebar.classList.remove('open'); overlay.classList.remove('show'); }
+  document.getElementById('hamburger').addEventListener('click', () => sidebar.classList.contains('open') ? closeSidebar() : openSidebar());
+  overlay.addEventListener('click', closeSidebar);
+
+  // Deep link via hash
+  const hash = location.hash.replace('#','');
+  if (hash) showChapter(hash);
+</script>
+</body>
+</html>
