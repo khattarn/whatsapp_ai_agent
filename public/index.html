@@ -192,6 +192,33 @@
     /* ── Settings panel ─── */
     .setting-group { margin-bottom: 20px; }
 
+    /* ── Templates panel ─── */
+    .tpl-card { border: 1px solid var(--border); border-radius: 10px; padding: 14px; margin-bottom: 12px; background: #fafafa; }
+    .tpl-card-header { display: flex; align-items: flex-start; gap: 8px; }
+    .tpl-name { font-weight: 700; font-size: 14px; font-family: monospace; color: var(--text); word-break: break-all; }
+    .tpl-cat-badge { display: inline-block; padding: 2px 8px; border-radius: 8px; font-size: 11px; font-weight: 700; }
+    .tpl-rejected-reason { background: #FEE2E2; color: #991B1B; border-radius: 6px; padding: 6px 10px; font-size: 12px; margin: 6px 0; }
+    .tpl-component { font-size: 13px; color: var(--muted); margin-top: 5px; line-height: 1.4; }
+    .tpl-body-preview { color: var(--text); background: #fff; border: 1px solid var(--border); border-radius: 6px; padding: 8px 10px; font-size: 13px; white-space: pre-wrap; word-break: break-word; margin-top: 6px; }
+    .tpl-comp-label { font-size: 10px; font-weight: 700; text-transform: uppercase; color: var(--muted); background: #F3F4F6; border-radius: 4px; padding: 1px 6px; }
+    .tpl-comp-format { font-size: 10px; background: #E0E7FF; color: #3730A3; border-radius: 4px; padding: 1px 6px; font-weight: 700; }
+    .tpl-btn-chip { display: inline-block; background: #F0F9FF; border: 1px solid #BAE6FD; color: #0369A1; border-radius: 6px; padding: 2px 8px; font-size: 11px; margin: 2px; }
+    .tpl-delete-btn { background: #FEE2E2; color: #DC2626; border: none; border-radius: 6px; padding: 5px 10px; cursor: pointer; font-size: 12px; white-space: nowrap; flex-shrink: 0; }
+    .tpl-delete-btn:hover { background: #FECACA; }
+    .tpl-btn-row { display: grid; grid-template-columns: 140px 1fr 1fr auto; gap: 6px; align-items: center; margin-bottom: 8px; }
+    .tpl-btn-row select, .tpl-btn-row input { padding: 7px 10px; border-radius: 8px; border: 1px solid var(--border); font-size: 13px; outline: none; }
+    .tpl-btn-row select:focus, .tpl-btn-row input:focus { border-color: var(--green); }
+    .tpl-rm-btn { background: #FEE2E2; color: #DC2626; border: none; border-radius: 6px; padding: 6px 10px; cursor: pointer; font-size: 12px; }
+    .ex-row { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+    .ex-label { font-size: 12px; font-weight: 700; color: var(--muted); min-width: 40px; white-space: nowrap; }
+    .ex-input { flex: 1; padding: 7px 10px; border-radius: 8px; border: 1px solid var(--border); font-size: 13px; outline: none; }
+    .ex-input:focus { border-color: var(--green); }
+    .tpl-section-label { font-size: 12px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; margin: 16px 0 8px; border-top: 1px solid var(--border); padding-top: 16px; }
+    @media (max-width: 768px) {
+      .tpl-btn-row { grid-template-columns: 1fr 1fr; grid-template-rows: auto auto; }
+      .tpl-btn-row .tpl-rm-btn { grid-column: 2; }
+    }
+
     /* ── Spinner / Toast ─── */
     .spinner { display: inline-block; width: 14px; height: 14px; border: 2px solid rgba(255,255,255,.4); border-top-color: #fff; border-radius: 50%; animation: spin .6s linear infinite; vertical-align: middle; }
     .spinner.dark { border-color: rgba(0,0,0,.1); border-top-color: var(--green); }
@@ -276,6 +303,7 @@
     <div class="main-tab active" data-tab="inbox">📥 Inbox</div>
     <div class="main-tab" data-tab="contacts">👥 Contacts</div>
     <div class="main-tab" data-tab="broadcast">📢 Broadcasts</div>
+    <div class="main-tab" data-tab="templates">📋 Templates</div>
     <div class="main-tab" data-tab="settings">⚙️ Settings</div>
   </div>
 
@@ -523,11 +551,125 @@
     </div>
   </div>
 
+  <!-- ═══ TEMPLATES ═══ -->
+  <div id="panel-templates" class="panel-scroll">
+
+    <!-- Create Template Card -->
+    <div class="card">
+      <h3>➕ Create New Template</h3>
+
+      <div class="form-row">
+        <label>Business</label>
+        <select id="tpl-biz-select"></select>
+      </div>
+
+      <div class="form-row">
+        <label>Template Name <span style="font-weight:400;color:var(--muted)">(lowercase, underscores only — e.g. <code>summer_sale_2026</code>)</span></label>
+        <input type="text" id="tpl-name" placeholder="e.g. summer_sale_2026" oninput="this.value=this.value.toLowerCase().replace(/[^a-z0-9_]/g,'_')" />
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div class="form-row">
+          <label>Category</label>
+          <select id="tpl-category">
+            <option value="MARKETING">📣 Marketing</option>
+            <option value="UTILITY">🔧 Utility</option>
+            <option value="AUTHENTICATION">🔐 Authentication</option>
+          </select>
+        </div>
+        <div class="form-row">
+          <label>Language</label>
+          <select id="tpl-language">
+            <option value="en_US">English (US)</option>
+            <option value="en">English</option>
+            <option value="hi">Hindi (हिंदी)</option>
+            <option value="mr">Marathi (मराठी)</option>
+            <option value="en_GB">English (UK)</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Header -->
+      <div class="tpl-section-label">Header <span style="font-weight:400;font-size:11px;text-transform:none;letter-spacing:0">(optional)</span></div>
+      <div class="form-row">
+        <label>Header Type</label>
+        <select id="tpl-header-type" onchange="updateHeaderFields()">
+          <option value="NONE">None</option>
+          <option value="TEXT">📝 Text</option>
+          <option value="IMAGE">🖼️ Image</option>
+          <option value="VIDEO">🎬 Video</option>
+          <option value="DOCUMENT">📄 Document</option>
+        </select>
+      </div>
+      <div id="tpl-header-text-fields" style="display:none">
+        <div class="form-row">
+          <label>Header Text <span style="font-weight:400;color:var(--muted)">— max 60 chars, use {{1}} for one variable</span></label>
+          <input type="text" id="tpl-header-text" maxlength="60" placeholder="e.g. Hello {{1}}!" oninput="updateExamples()" />
+        </div>
+        <div id="tpl-header-ex-fields"></div>
+      </div>
+      <div id="tpl-header-media-note" style="display:none">
+        <div class="info-box" style="font-size:12px">
+          The actual media file (image/video/document) is supplied at send time via the <strong>Broadcasts</strong> tab — nothing extra needed here. Meta will mark the header format in the template.
+        </div>
+      </div>
+
+      <!-- Body -->
+      <div class="tpl-section-label">Body</div>
+      <div class="form-row">
+        <label>Body Text <span style="font-weight:400;color:var(--muted)">— use {{1}}, {{2}}, … for personalisation (e.g. name, order number)</span></label>
+        <textarea id="tpl-body" maxlength="1024" rows="4" placeholder="Hi {{1}}, your order {{2}} is ready for pickup! 🎉" oninput="updateExamples()"></textarea>
+        <div class="char-count"><span id="tpl-body-count">0</span>/1024</div>
+      </div>
+      <div id="tpl-body-ex-fields"></div>
+
+      <!-- Footer -->
+      <div class="tpl-section-label">Footer <span style="font-weight:400;font-size:11px;text-transform:none;letter-spacing:0">(optional)</span></div>
+      <div class="form-row">
+        <label>Footer Text <span style="font-weight:400;color:var(--muted)">— max 60 chars, no variables</span></label>
+        <input type="text" id="tpl-footer" maxlength="60" placeholder="e.g. Reply STOP to unsubscribe" />
+      </div>
+
+      <!-- Buttons -->
+      <div class="tpl-section-label">Buttons <span style="font-weight:400;font-size:11px;text-transform:none;letter-spacing:0">(optional — up to 3 Quick Reply or 2 CTA)</span></div>
+      <div class="info-box" style="font-size:12px;margin-bottom:10px">
+        <strong>Quick Reply</strong> — customer taps to send a fixed reply (e.g. "Yes", "More Info").<br>
+        <strong>URL</strong> — opens a link; use {{1}} at the end of the URL for a dynamic suffix.<br>
+        <strong>Phone</strong> — dials a number when tapped.<br>
+        Don't mix Quick Reply and CTA (URL / Phone) buttons in the same template.
+      </div>
+      <div id="tpl-btns-list"></div>
+      <button type="button" class="btn-secondary" id="tpl-add-btn" style="font-size:12px;margin-bottom:16px">+ Add Button</button>
+
+      <button class="btn-primary" id="tpl-submit-btn">📤 Submit for Meta Approval</button>
+      <div id="tpl-submit-result" style="margin-top:12px;font-size:13px"></div>
+    </div>
+
+    <!-- Template List Card -->
+    <div class="card">
+      <h3>📋 Your Templates</h3>
+      <div style="display:flex;gap:10px;align-items:center;margin-bottom:16px;flex-wrap:wrap">
+        <select id="tpl-list-biz" style="padding:7px 12px;border-radius:8px;border:1px solid var(--border);font-size:13px;outline:none;flex:1;min-width:140px"></select>
+        <select id="tpl-status-filter" style="padding:7px 12px;border-radius:8px;border:1px solid var(--border);font-size:13px;outline:none" onchange="loadTemplateList()">
+          <option value="ALL">All Statuses</option>
+          <option value="APPROVED">✅ Approved</option>
+          <option value="PENDING">⏳ Pending</option>
+          <option value="REJECTED">❌ Rejected</option>
+          <option value="PAUSED">⏸️ Paused</option>
+        </select>
+        <button class="btn-secondary" id="tpl-load-btn">Load</button>
+      </div>
+      <div id="tpl-list-container">
+        <div style="color:var(--muted);font-size:13px;text-align:center;padding:24px">Select a business above and click Load</div>
+      </div>
+    </div>
+  </div>
+
   <!-- ═══ SETTINGS ═══ -->
   <div id="panel-settings" class="panel-scroll">
     <div class="card">
-      <h3>🏢 Business Configuration</h3>
-      <p style="font-size:13px;color:var(--muted);margin-bottom:16px">Edit these directly in Supabase → Table editor → <code>businesses</code>.</p>
+      <h3>🤖 AI Automation</h3>
+      <p style="font-size:13px;color:var(--muted);margin-bottom:16px">Configure how the AI responds to customer messages for each business.</p>
       <div id="settings-biz-list"></div>
     </div>
     <div class="card">
@@ -622,7 +764,7 @@ function renderBizTabs() {
 function populateAllBizSelects() {
   const opts = '<option value="">Select business…</option>' +
     state.businesses.map(b => `<option value="${b.id}">${b.name}</option>`).join('');
-  ['bc-biz-select', 'bc-hist-biz-select', 'ct-biz-select', 'ct-list-biz-select'].forEach(id => {
+  ['bc-biz-select', 'bc-hist-biz-select', 'ct-biz-select', 'ct-list-biz-select', 'tpl-biz-select', 'tpl-list-biz'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.innerHTML = opts;
   });
@@ -855,13 +997,14 @@ document.querySelectorAll('.main-tab').forEach(tab => {
     document.querySelectorAll('.main-tab').forEach(t => t.classList.remove('active'));
     tab.classList.add('active');
     document.getElementById('panel-inbox').style.display = 'none';
-    ['contacts','broadcast','settings'].forEach(p => {
+    ['contacts','broadcast','templates','settings'].forEach(p => {
       document.getElementById(`panel-${p}`).style.display = 'none';
     });
     const id = tab.dataset.tab;
     if (id === 'inbox') document.getElementById('panel-inbox').style.display = 'flex';
     else document.getElementById(`panel-${id}`).style.display = 'flex';
     if (id === 'broadcast') loadBroadcastHistory();
+    if (id === 'templates') loadTemplateList();
     if (id === 'settings') renderSettings();
   });
 });
@@ -1257,14 +1400,72 @@ function renderSettings() {
     bizList.innerHTML = '<p style="font-size:13px;color:var(--muted)">Businesses will appear here once Supabase is connected.</p>';
     return;
   }
+
+  const thresholdLabels = {
+    all:    'Auto-reply to everything (Full AI)',
+    simple: 'Auto-reply to common queries, suggest for the rest',
+    none:   'Always suggest — agent reviews before sending',
+  };
+
   bizList.innerHTML = state.businesses.map(b => `
-    <div style="border:1px solid var(--border);border-radius:8px;padding:14px;margin-bottom:12px">
-      <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
-        <div style="width:16px;height:16px;border-radius:50%;background:${b.color}"></div>
-        <strong>${b.name}</strong>
+    <div style="border:1px solid var(--border);border-radius:10px;padding:16px;margin-bottom:16px">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
+        <div style="width:14px;height:14px;border-radius:50%;background:${b.color}"></div>
+        <strong style="font-size:15px">${b.name}</strong>
+        <span style="font-size:11px;color:var(--muted);margin-left:auto">${b.phone_number_id || ''}</span>
       </div>
-      <div style="font-size:12px;color:var(--muted)">Phone Number ID: <code>${b.phone_number_id || 'not set'}</code></div>
+
+      <div style="margin-bottom:12px">
+        <label style="font-size:12px;font-weight:600;display:block;margin-bottom:5px">AI Auto-Reply Mode</label>
+        <select id="threshold-${b.id}" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;font-size:13px">
+          <option value="all"    ${(b.ai_auto_threshold||'simple')==='all'    ? 'selected':''}>Full AI — auto-reply to all messages</option>
+          <option value="simple" ${(b.ai_auto_threshold||'simple')==='simple' ? 'selected':''}>Smart — auto-reply to common queries</option>
+          <option value="none"   ${(b.ai_auto_threshold||'simple')==='none'   ? 'selected':''}>Manual — agent reviews every AI draft</option>
+        </select>
+        <div style="font-size:11px;color:var(--muted);margin-top:4px" id="threshold-hint-${b.id}">${thresholdLabels[b.ai_auto_threshold||'simple']}</div>
+      </div>
+
+      <div style="margin-bottom:14px">
+        <label style="font-size:12px;font-weight:600;display:block;margin-bottom:5px">AI System Prompt <span style="font-weight:400;color:var(--muted)">(tells Claude how to behave)</span></label>
+        <textarea id="prompt-${b.id}" rows="6" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;font-size:12px;font-family:inherit;resize:vertical;box-sizing:border-box">${escHtml(b.system_prompt || '')}</textarea>
+      </div>
+
+      <button onclick="saveBizSettings('${b.id}')" style="background:var(--primary);color:#fff;border:none;padding:8px 18px;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer">Save</button>
+      <span id="save-status-${b.id}" style="font-size:12px;color:var(--muted);margin-left:10px"></span>
     </div>`).join('');
+
+  // Update hint text live when dropdown changes
+  state.businesses.forEach(b => {
+    const sel = document.getElementById(`threshold-${b.id}`);
+    if (sel) sel.addEventListener('change', () => {
+      document.getElementById(`threshold-hint-${b.id}`).textContent = thresholdLabels[sel.value] || '';
+    });
+  });
+}
+
+async function saveBizSettings(bizId) {
+  const threshold = document.getElementById(`threshold-${bizId}`)?.value;
+  const prompt    = document.getElementById(`prompt-${bizId}`)?.value;
+  const statusEl  = document.getElementById(`save-status-${bizId}`);
+  statusEl.textContent = 'Saving…';
+  try {
+    const res = await api('update-business', {
+      method: 'PATCH',
+      body: JSON.stringify({ id: bizId, ai_auto_threshold: threshold, system_prompt: prompt }),
+    });
+    if (res.ok) {
+      // Update local state so dropdown hint stays correct
+      const biz = state.businesses.find(b => b.id === bizId);
+      if (biz) { biz.ai_auto_threshold = threshold; biz.system_prompt = prompt; }
+      statusEl.textContent = 'Saved!';
+      toast('AI settings saved');
+    } else {
+      statusEl.textContent = 'Error: ' + (res.error || 'unknown');
+    }
+  } catch (e) {
+    statusEl.textContent = 'Error: ' + e.message;
+  }
+  setTimeout(() => { if (statusEl) statusEl.textContent = ''; }, 3000);
 }
 
 // ── Mobile sidebar ─────────────────────────────────────────────────────────
@@ -1300,6 +1501,277 @@ async function init() {
 }
 
 init();
+
+// ══════════════════════════════════════════════════
+// ═══ TEMPLATES TAB ═══════════════════════════════
+// ══════════════════════════════════════════════════
+
+function escHtml(str) {
+  return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function countVars(text) {
+  const nums = (text.match(/\{\{(\d+)\}\}/g) || []).map(m => parseInt(m.replace(/[{}]/g,'')));
+  return nums.length ? Math.max(...nums) : 0;
+}
+
+function updateHeaderFields() {
+  const type = document.getElementById('tpl-header-type').value;
+  document.getElementById('tpl-header-text-fields').style.display = type === 'TEXT' ? 'block' : 'none';
+  document.getElementById('tpl-header-media-note').style.display = ['IMAGE','VIDEO','DOCUMENT'].includes(type) ? 'block' : 'none';
+  updateExamples();
+}
+
+function updateExamples() {
+  const headerType = document.getElementById('tpl-header-type').value;
+  const headerText = headerType === 'TEXT' ? (document.getElementById('tpl-header-text')?.value || '') : '';
+  const bodyText = document.getElementById('tpl-body').value;
+  document.getElementById('tpl-body-count').textContent = bodyText.length;
+
+  // Header variable examples
+  const headerExFields = document.getElementById('tpl-header-ex-fields');
+  const headerVarCount = countVars(headerText);
+  if (headerType === 'TEXT' && headerVarCount > 0) {
+    headerExFields.innerHTML =
+      '<div class="info-box" style="font-size:12px;margin-bottom:8px">Provide example values for header variables — required by Meta for review:</div>' +
+      Array.from({ length: headerVarCount }, (_, i) =>
+        `<div class="ex-row"><span class="ex-label">{{${i+1}}}</span><input class="ex-input" id="tpl-header-ex-${i+1}" type="text" placeholder="Example for {{${i+1}}}" /></div>`
+      ).join('');
+  } else {
+    headerExFields.innerHTML = '';
+  }
+
+  // Body variable examples
+  const bodyExFields = document.getElementById('tpl-body-ex-fields');
+  const bodyVarCount = countVars(bodyText);
+  if (bodyVarCount > 0) {
+    bodyExFields.innerHTML =
+      '<div class="info-box" style="font-size:12px;margin-bottom:8px">Provide example values for body variables — required by Meta for review:</div>' +
+      Array.from({ length: bodyVarCount }, (_, i) =>
+        `<div class="ex-row"><span class="ex-label">{{${i+1}}}</span><input class="ex-input" id="tpl-body-ex-${i+1}" type="text" placeholder="Example for {{${i+1}}}" /></div>`
+      ).join('');
+  } else {
+    bodyExFields.innerHTML = '';
+  }
+}
+
+function addTplButton() {
+  const list = document.getElementById('tpl-btns-list');
+  if (list.children.length >= 3) { toast('Maximum 3 buttons allowed'); return; }
+  const div = document.createElement('div');
+  div.className = 'tpl-btn-row';
+  div.innerHTML = `
+    <select class="tpl-btn-type" onchange="updateTplBtnFields(this)">
+      <option value="QUICK_REPLY">💬 Quick Reply</option>
+      <option value="URL">🔗 URL</option>
+      <option value="PHONE_NUMBER">📞 Phone</option>
+    </select>
+    <input type="text" class="tpl-btn-text" placeholder="Button label (max 25)" maxlength="25" />
+    <input type="text" class="tpl-btn-value" placeholder="(not needed for Quick Reply)" style="display:none" />
+    <button class="tpl-rm-btn" onclick="this.closest('.tpl-btn-row').remove()">✕</button>`;
+  list.appendChild(div);
+}
+
+function updateTplBtnFields(sel) {
+  const row = sel.closest('.tpl-btn-row');
+  const valueInput = row.querySelector('.tpl-btn-value');
+  const type = sel.value;
+  if (type === 'QUICK_REPLY') {
+    valueInput.style.display = 'none';
+  } else if (type === 'URL') {
+    valueInput.style.display = '';
+    valueInput.placeholder = 'https://example.com/page — append {{1}} for a dynamic suffix';
+  } else if (type === 'PHONE_NUMBER') {
+    valueInput.style.display = '';
+    valueInput.placeholder = '+919876543210';
+  }
+}
+
+function buildComponents() {
+  const components = [];
+
+  // Header
+  const headerType = document.getElementById('tpl-header-type').value;
+  if (headerType !== 'NONE') {
+    const comp = { type: 'HEADER', format: headerType };
+    if (headerType === 'TEXT') {
+      const headerText = document.getElementById('tpl-header-text').value.trim();
+      if (!headerText) throw new Error('Header text is required when Header Type is Text');
+      comp.text = headerText;
+      const varCount = countVars(headerText);
+      if (varCount > 0) {
+        comp.example = {
+          header_text: Array.from({ length: varCount }, (_, i) =>
+            document.getElementById(`tpl-header-ex-${i+1}`)?.value.trim() || `Example${i+1}`),
+        };
+      }
+    }
+    // IMAGE/VIDEO/DOCUMENT: format only — media URL supplied at send time
+    components.push(comp);
+  }
+
+  // Body
+  const bodyText = document.getElementById('tpl-body').value.trim();
+  if (!bodyText) throw new Error('Body text is required');
+  const bodyComp = { type: 'BODY', text: bodyText };
+  const bodyVarCount = countVars(bodyText);
+  if (bodyVarCount > 0) {
+    const examples = Array.from({ length: bodyVarCount }, (_, i) =>
+      document.getElementById(`tpl-body-ex-${i+1}`)?.value.trim() || `Example${i+1}`);
+    bodyComp.example = { body_text: [examples] };
+  }
+  components.push(bodyComp);
+
+  // Footer
+  const footerText = document.getElementById('tpl-footer').value.trim();
+  if (footerText) components.push({ type: 'FOOTER', text: footerText });
+
+  // Buttons
+  const btnRows = document.querySelectorAll('#tpl-btns-list .tpl-btn-row');
+  if (btnRows.length) {
+    const buttons = [];
+    btnRows.forEach(row => {
+      const type = row.querySelector('.tpl-btn-type').value;
+      const text = row.querySelector('.tpl-btn-text').value.trim();
+      if (!text) return;
+      const btn = { type, text };
+      if (type === 'URL') {
+        const url = row.querySelector('.tpl-btn-value').value.trim();
+        if (!url) throw new Error('URL is required for URL buttons');
+        btn.url = url;
+        if (url.includes('{{1}}')) btn.example = ['example-value'];
+      } else if (type === 'PHONE_NUMBER') {
+        const phone = row.querySelector('.tpl-btn-value').value.trim();
+        if (!phone) throw new Error('Phone number is required for Phone buttons');
+        btn.phone_number = phone;
+      }
+      buttons.push(btn);
+    });
+    if (buttons.length) components.push({ type: 'BUTTONS', buttons });
+  }
+
+  return components;
+}
+
+document.getElementById('tpl-add-btn').addEventListener('click', addTplButton);
+
+document.getElementById('tpl-submit-btn').addEventListener('click', async () => {
+  const bizId = document.getElementById('tpl-biz-select').value;
+  const name  = document.getElementById('tpl-name').value.trim();
+  const category = document.getElementById('tpl-category').value;
+  const language = document.getElementById('tpl-language').value;
+  const result = document.getElementById('tpl-submit-result');
+
+  if (!bizId)  { toast('Please select a business'); return; }
+  if (!name)   { toast('Please enter a template name'); return; }
+  if (!/^[a-z0-9_]+$/.test(name)) { toast('Name must be lowercase letters, numbers, and underscores only'); return; }
+
+  let components;
+  try { components = buildComponents(); }
+  catch (e) { toast('❌ ' + e.message); return; }
+
+  const btn = document.getElementById('tpl-submit-btn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> Submitting…';
+  result.textContent = '';
+
+  try {
+    const res = await api('templates', { method: 'POST', body: JSON.stringify({ businessId: bizId, name, category, language, components }) });
+    if (res.success) {
+      result.innerHTML = `<span style="color:green">✅ Submitted! Template ID: ${escHtml(res.id)} · Status: ${escHtml(res.status || 'PENDING')}</span>`;
+      toast('✅ Template submitted for Meta review');
+      // Reset form
+      ['tpl-name','tpl-body','tpl-footer','tpl-header-text'].forEach(id => { document.getElementById(id).value = ''; });
+      document.getElementById('tpl-header-type').value = 'NONE';
+      document.getElementById('tpl-btns-list').innerHTML = '';
+      updateHeaderFields();
+      updateExamples();
+      // Refresh list if same business is already selected
+      if (document.getElementById('tpl-list-biz').value === bizId) loadTemplateList();
+    } else {
+      result.innerHTML = `<span style="color:red">❌ ${escHtml(res.error || 'Submission failed')}</span>` +
+        (res.details ? `<br><span style="font-size:11px;color:var(--muted)">${escHtml(JSON.stringify(res.details))}</span>` : '');
+    }
+  } catch (e) {
+    result.innerHTML = '<span style="color:red">❌ Network error</span>';
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '📤 Submit for Meta Approval';
+  }
+});
+
+// ── Template list ─────────────────────────────────────────────────────────
+async function loadTemplateList() {
+  const bizId = document.getElementById('tpl-list-biz').value;
+  const container = document.getElementById('tpl-list-container');
+  if (!bizId) {
+    container.innerHTML = '<div style="color:var(--muted);font-size:13px;text-align:center;padding:24px">Select a business above and click Load</div>';
+    return;
+  }
+
+  container.innerHTML = '<div style="text-align:center;padding:24px"><span class="spinner dark"></span></div>';
+
+  try {
+    const status = document.getElementById('tpl-status-filter').value;
+    let url = `templates?businessId=${bizId}`;
+    if (status && status !== 'ALL') url += `&status=${status}`;
+    const data = await api(url);
+    const templates = data.templates || [];
+
+    if (data.error) { container.innerHTML = `<div style="color:red;text-align:center;padding:24px;font-size:13px">❌ ${escHtml(data.error)}</div>`; return; }
+    if (!templates.length) { container.innerHTML = '<div style="color:var(--muted);font-size:13px;text-align:center;padding:32px">No templates found</div>'; return; }
+
+    const statusCls  = { APPROVED:'sent', PENDING:'sending', REJECTED:'failed', PAUSED:'draft', PENDING_DELETION:'draft' };
+    const catBg      = { MARKETING:'#F5F3FF', UTILITY:'#ECFEFF', AUTHENTICATION:'#FFFBEB' };
+    const catFg      = { MARKETING:'#7C3AED', UTILITY:'#0891B2', AUTHENTICATION:'#D97706' };
+
+    container.innerHTML =
+      `<div style="font-size:13px;color:var(--muted);margin-bottom:12px">${templates.length} template${templates.length !== 1 ? 's' : ''}</div>` +
+      templates.map(t => {
+        const body   = t.components?.find(c => c.type === 'BODY');
+        const header = t.components?.find(c => c.type === 'HEADER');
+        const footer = t.components?.find(c => c.type === 'FOOTER');
+        const btns   = t.components?.find(c => c.type === 'BUTTONS');
+        const safeName = t.name.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+        return `<div class="tpl-card">
+          <div class="tpl-card-header">
+            <div style="flex:1;min-width:0">
+              <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:6px">
+                <span class="tpl-name">${escHtml(t.name)}</span>
+                <span class="bc-status ${statusCls[t.status]||'draft'}">${escHtml(t.status)}</span>
+                <span class="tpl-cat-badge" style="background:${catBg[t.category]||'#F3F4F6'};color:${catFg[t.category]||'#6B7280'}">${escHtml(t.category)}</span>
+                <span style="font-size:11px;color:var(--muted)">${escHtml(t.language)}</span>
+              </div>
+              ${t.rejected_reason ? `<div class="tpl-rejected-reason">❌ Rejected: ${escHtml(t.rejected_reason)}</div>` : ''}
+              ${header ? `<div class="tpl-component"><span class="tpl-comp-label">Header</span> <span class="tpl-comp-format">${escHtml(header.format||'TEXT')}</span>${header.text ? ' — ' + escHtml(header.text) : ''}</div>` : ''}
+              ${body   ? `<div class="tpl-body-preview">${escHtml(body.text||'').replace(/\n/g,'<br>')}</div>` : ''}
+              ${footer ? `<div class="tpl-component"><span class="tpl-comp-label">Footer</span> — ${escHtml(footer.text)}</div>` : ''}
+              ${btns   ? `<div class="tpl-component"><span class="tpl-comp-label">Buttons</span> ${(btns.buttons||[]).map(b=>`<span class="tpl-btn-chip">${escHtml(b.text)}</span>`).join('')}</div>` : ''}
+            </div>
+            <button class="tpl-delete-btn" onclick="deleteTemplate('${escHtml(t.id)}','${safeName}')">🗑 Delete</button>
+          </div>
+        </div>`;
+      }).join('');
+  } catch (e) {
+    container.innerHTML = '<div style="color:red;text-align:center;padding:24px;font-size:13px">Failed to load templates</div>';
+  }
+}
+
+async function deleteTemplate(templateId, templateName) {
+  if (!confirm(`Delete template "${templateName}"?\n\nApproved templates that have been sent to customers will stop working immediately.`)) return;
+  const bizId = document.getElementById('tpl-list-biz').value;
+  try {
+    const res = await api(`templates?businessId=${bizId}&name=${encodeURIComponent(templateName)}`, { method: 'DELETE' });
+    if (res.success) { toast(`✅ Template "${templateName}" deleted`); loadTemplateList(); }
+    else toast('❌ ' + (res.error || 'Delete failed'));
+  } catch (e) { toast('❌ Network error'); }
+}
+
+document.getElementById('tpl-load-btn').addEventListener('click', loadTemplateList);
+document.getElementById('tpl-list-biz').addEventListener('change', loadTemplateList);
+document.getElementById('tpl-biz-select').addEventListener('change', () => {
+  document.getElementById('tpl-list-biz').value = document.getElementById('tpl-biz-select').value;
+});
 </script>
 </body>
 </html>

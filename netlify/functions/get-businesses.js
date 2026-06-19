@@ -16,7 +16,7 @@ exports.handler = async () => {
   try {
     const { data } = await supabase
       .from('businesses')
-      .select('id, name, description, phone_number_id, color, ai_auto_threshold')
+      .select('id, name, description, phone_number_id, color, ai_auto_threshold, system_prompt')
       .order('created_at', { ascending: true });
 
     return {

@@ -583,13 +583,13 @@ exports.handler = async (event) => {
       }
 
       if (conversation.ai_enabled && text) {
-        const complex = needsHuman(text);
-        const simple  = isSimpleQuery(text);
+        const complex    = needsHuman(text);
+        const simple     = isSimpleQuery(text);
+        const threshold  = business.ai_auto_threshold || 'simple'; // 'all' | 'simple' | 'none'
 
         if (complex) {
-          // Mark as needing human, store a note
+          // Always escalate complex queries to a human regardless of threshold
           await supabase.from('conversations').update({ needs_human: true }).eq('id', conversation.id);
-          // Send a holding message via AI
           const holdMsg = 'Thank you for reaching out! Your message has been flagged for our team and a human agent will get back to you shortly. 🙏';
           await sendWhatsAppMessage(business.access_token, phoneNumberId, fromPhone, holdMsg);
           await supabase.from('messages').insert({
@@ -602,6 +602,34 @@ exports.handler = async (event) => {
             status: 'sent',
             timestamp: new Date().toISOString(),
           });
+        } else if (threshold === 'none') {
+          // Never auto-send — always queue for agent review
+          const history = await getConversationHistory(conversation.id, 12);
+          const claudeMessages = history.map(m => ({
+            role: m.direction === 'inbound' ? 'user' : 'assistant',
+            content: m.content,
+          }));
+          if (!claudeMessages.length || claudeMessages[claudeMessages.length - 1].role !== 'user') {
+            claudeMessages.push({ role: 'user', content: text });
+          }
+          const aiRes = await anthropic.messages.create({
+            model: 'claude-opus-4-6',
+            max_tokens: 500,
+            system: business.system_prompt || `You are a helpful customer service assistant for ${business.name}. Be concise, friendly, and helpful.`,
+            messages: claudeMessages,
+          });
+          const aiText = aiRes.content[0]?.text || 'Thank you for your message! We will get back to you shortly.';
+          await supabase.from('messages').insert({
+            conversation_id: conversation.id,
+            from_phone: phoneNumberId,
+            to_phone: fromPhone,
+            content: aiText,
+            direction: 'outbound',
+            sender_type: 'ai_suggestion',
+            status: 'pending_review',
+            timestamp: new Date().toISOString(),
+          });
+          await supabase.from('conversations').update({ needs_human: true }).eq('id', conversation.id);
         } else {
           // Generate Claude response for all non-complex messages
           const history = await getConversationHistory(conversation.id, 12);
@@ -610,7 +638,6 @@ exports.handler = async (event) => {
             content: m.content,
           }));
 
-          // Ensure conversation ends with user message
           if (!claudeMessages.length || claudeMessages[claudeMessages.length - 1].role !== 'user') {
             claudeMessages.push({ role: 'user', content: text });
           }
@@ -624,8 +651,10 @@ exports.handler = async (event) => {
 
           const aiText = aiRes.content[0]?.text || 'Thank you for your message! We will get back to you shortly.';
 
-          if (simple) {
-            // Auto-send for simple FAQs
+          // 'all' → auto-send everything; 'simple' → auto-send only pattern-matched queries
+          const shouldAutoSend = threshold === 'all' || (threshold === 'simple' && simple);
+
+          if (shouldAutoSend) {
             const waRes = await sendWhatsAppMessage(business.access_token, phoneNumberId, fromPhone, aiText);
             await supabase.from('messages').insert({
               conversation_id: conversation.id,
