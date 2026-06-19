@@ -1695,7 +1695,11 @@ function buildComponents() {
         };
       }
     }
-    // IMAGE/VIDEO/DOCUMENT: format only — media URL supplied at send time
+    if (['IMAGE','VIDEO','DOCUMENT'].includes(headerType)) {
+      const mediaUrl = document.getElementById('tpl-header-media-url')?.value.trim();
+      if (!mediaUrl) throw new Error('A media URL is required for ' + headerType + ' header. Upload to Assets Library first.');
+      comp._mediaUrl = mediaUrl;
+    }
     components.push(comp);
   }
 

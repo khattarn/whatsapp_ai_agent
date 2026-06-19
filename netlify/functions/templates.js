@@ -25,6 +25,42 @@ async function metaRequest(method, path, accessToken, body) {
   return res.json();
 }
 
+// Upload a publicly accessible media URL to Meta and return a header_handle.
+// Meta requires this for IMAGE/VIDEO/DOCUMENT template header examples.
+async function uploadMediaForHandle(mediaUrl, accessToken) {
+  const appId = process.env.META_APP_ID;
+  if (!appId) throw new Error('META_APP_ID env var is not set. Add it in Netlify → Environment Variables.');
+
+  // Fetch the file
+  const fileResp = await fetch(mediaUrl);
+  if (!fileResp.ok) throw new Error(`Could not fetch media URL (${fileResp.status}): ${mediaUrl}`);
+  const contentType = fileResp.headers.get('content-type') || 'application/octet-stream';
+  const buffer = await fileResp.arrayBuffer();
+  const fileLength = buffer.byteLength;
+  const fileName = mediaUrl.split('/').pop().split('?')[0] || 'media';
+
+  // Step 1 — create upload session
+  const sessionUrl = `${META_API}/${appId}/uploads?file_name=${encodeURIComponent(fileName)}&file_length=${fileLength}&file_type=${encodeURIComponent(contentType)}&access_token=${accessToken}`;
+  const sessionRes = await fetch(sessionUrl, { method: 'POST' });
+  const sessionData = await sessionRes.json();
+  if (!sessionData.id) throw new Error(`Meta upload session failed: ${JSON.stringify(sessionData)}`);
+  const uploadSessionId = sessionData.id; // "upload:{id}"
+
+  // Step 2 — upload binary data
+  const uploadRes = await fetch(`${META_API}/${uploadSessionId}`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `OAuth ${accessToken}`,
+      'file_offset': '0',
+      'Content-Type': contentType,
+    },
+    body: buffer,
+  });
+  const uploadData = await uploadRes.json();
+  if (!uploadData.h) throw new Error(`Meta file upload failed: ${JSON.stringify(uploadData)}`);
+  return uploadData.h;
+}
+
 async function getBusiness(businessId) {
   const { data } = await supabase
     .from('businesses')
@@ -76,11 +112,21 @@ exports.handler = async (event) => {
       if (!biz) return { statusCode: 404, headers, body: JSON.stringify({ error: 'Business not found' }) };
       if (!biz.waba_id) return { statusCode: 400, headers, body: JSON.stringify({ error: 'waba_id not set for this business' }) };
 
+      // Resolve _mediaUrl on HEADER components → upload to Meta and inject header_handle example
+      const resolvedComponents = await Promise.all(components.map(async (comp) => {
+        if (comp.type === 'HEADER' && ['IMAGE', 'VIDEO', 'DOCUMENT'].includes(comp.format) && comp._mediaUrl) {
+          const { _mediaUrl, ...rest } = comp;
+          const handle = await uploadMediaForHandle(_mediaUrl, biz.access_token);
+          return { ...rest, example: { header_handle: [handle] } };
+        }
+        return comp;
+      }));
+
       const result = await metaRequest('POST', `/${biz.waba_id}/message_templates`, biz.access_token, {
         name,
         language,
         category,
-        components,
+        components: resolvedComponents,
       });
 
       if (result.error) {
