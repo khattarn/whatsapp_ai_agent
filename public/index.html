@@ -1079,7 +1079,7 @@ document.querySelectorAll('.main-tab').forEach(tab => {
     else document.getElementById(`panel-${id}`).style.display = 'flex';
     if (id === 'broadcast') loadBroadcastHistory();
     if (id === 'templates') refreshTemplatesTab();
-    if (id === 'settings') loadBusinesses().then(renderSettings);
+    if (id === 'settings') renderSettings();
   });
 });
 
@@ -1463,7 +1463,7 @@ async function loadBroadcastHistory() {
 }
 
 // ── Settings ───────────────────────────────────────────────────────────────
-function renderSettings() {
+async function renderSettings() {
   const hostname = window.location.hostname;
   document.getElementById('webhook-url-display').textContent =
     hostname === 'localhost' ? 'https://YOUR-SITE.netlify.app/api/webhook'
@@ -1482,39 +1482,54 @@ function renderSettings() {
     none:   'Always suggest — agent reviews before sending',
   };
 
+  // Render cards immediately — Save button visible before AI settings load
   bizList.innerHTML = realBizs.map(b => `
     <div style="border:1px solid var(--border);border-radius:10px;padding:16px;margin-bottom:16px">
-      <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
-        <div style="width:14px;height:14px;border-radius:50%;background:${b.color}"></div>
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;flex-wrap:wrap">
+        <div style="width:14px;height:14px;border-radius:50%;flex-shrink:0;background:${b.color}"></div>
         <strong style="font-size:15px">${escHtml(b.name)}</strong>
-        <span style="font-size:11px;color:var(--muted)">${b.phone_number_id || ''}</span>
-        <button onclick="saveBizSettings('${b.id}')" style="margin-left:auto;background:var(--primary);color:#fff;border:none;padding:6px 16px;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer">Save</button>
+        <button onclick="saveBizSettings('${b.id}')" style="margin-left:auto;background:#16a34a;color:#fff;border:none;padding:7px 20px;border-radius:6px;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap">💾 Save</button>
         <span id="save-status-${b.id}" style="font-size:12px;color:var(--muted)"></span>
       </div>
 
       <div style="margin-bottom:12px">
         <label style="font-size:12px;font-weight:600;display:block;margin-bottom:5px">AI Auto-Reply Mode</label>
         <select id="threshold-${b.id}" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;font-size:13px">
-          <option value="all"    ${(b.ai_auto_threshold||'simple')==='all'    ? 'selected':''}>Full AI — auto-reply to all messages</option>
-          <option value="simple" ${(b.ai_auto_threshold||'simple')==='simple' ? 'selected':''}>Smart — auto-reply to common queries</option>
-          <option value="none"   ${(b.ai_auto_threshold||'simple')==='none'   ? 'selected':''}>Manual — agent reviews every AI draft</option>
+          <option value="all">Full AI — auto-reply to all messages</option>
+          <option value="simple" selected>Smart — auto-reply to common queries</option>
+          <option value="none">Manual — agent reviews every AI draft</option>
         </select>
-        <div style="font-size:11px;color:var(--muted);margin-top:4px" id="threshold-hint-${b.id}">${thresholdLabels[b.ai_auto_threshold||'simple']}</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:4px" id="threshold-hint-${b.id}">Auto-reply to common queries, suggest for the rest</div>
       </div>
 
       <div>
         <label style="font-size:12px;font-weight:600;display:block;margin-bottom:5px">AI System Prompt <span style="font-weight:400;color:var(--muted)">(tells Claude how to behave for this business)</span></label>
-        <textarea id="prompt-${b.id}" rows="8" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;font-size:12px;font-family:inherit;resize:vertical;box-sizing:border-box">${escHtml(b.system_prompt || '')}</textarea>
+        <textarea id="prompt-${b.id}" rows="8" placeholder="Loading…" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;font-size:12px;font-family:inherit;resize:vertical;box-sizing:border-box"></textarea>
       </div>
     </div>`).join('');
 
-  // Update hint text live when dropdown changes
+  // Attach dropdown change listeners
   realBizs.forEach(b => {
     const sel = document.getElementById(`threshold-${b.id}`);
     if (sel) sel.addEventListener('change', () => {
       document.getElementById(`threshold-hint-${b.id}`).textContent = thresholdLabels[sel.value] || '';
     });
   });
+
+  // Load AI settings separately — doesn't block rendering
+  try {
+    const data = await api('get-businesses');
+    if (data.businesses?.length) {
+      data.businesses.forEach(b => {
+        const sel = document.getElementById(`threshold-${b.id}`);
+        const ta  = document.getElementById(`prompt-${b.id}`);
+        const hint = document.getElementById(`threshold-hint-${b.id}`);
+        if (sel && b.ai_auto_threshold) { sel.value = b.ai_auto_threshold; }
+        if (hint) hint.textContent = thresholdLabels[sel?.value || 'simple'] || '';
+        if (ta)  { ta.value = b.system_prompt || ''; ta.placeholder = ''; }
+      });
+    }
+  } catch (_) { /* AI settings unavailable — user can still type and save */ }
 }
 
 async function saveBizSettings(bizId) {
