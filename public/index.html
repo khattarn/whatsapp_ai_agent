@@ -192,6 +192,37 @@
     /* ── Settings panel ─── */
     .setting-group { margin-bottom: 20px; }
 
+    /* ── Catalogue ─── */
+    .prod-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(200px,1fr)); gap:14px; margin-top:4px; }
+    .prod-card { border:1px solid var(--border); border-radius:10px; overflow:hidden; background:#fff; display:flex; flex-direction:column; }
+    .prod-img { width:100%; height:140px; object-fit:cover; background:#F3F4F6; display:flex; align-items:center; justify-content:center; font-size:36px; color:#d1d5db; }
+    .prod-img img { width:100%; height:100%; object-fit:cover; }
+    .prod-body { padding:10px; flex:1; display:flex; flex-direction:column; gap:4px; }
+    .prod-name { font-weight:700; font-size:13px; }
+    .prod-cat { font-size:11px; color:var(--muted); }
+    .prod-price { font-size:14px; font-weight:700; color:#16a34a; margin-top:2px; }
+    .prod-attrs { font-size:11px; color:var(--muted); }
+    .prod-stock-badge { display:inline-block; font-size:10px; font-weight:700; padding:2px 7px; border-radius:10px; }
+    .prod-stock-badge.in  { background:#DCFCE7; color:#166534; }
+    .prod-stock-badge.out { background:#FEE2E2; color:#991B1B; }
+    .prod-actions { display:flex; gap:6px; padding:8px 10px; border-top:1px solid var(--border); }
+    .prod-btn { flex:1; padding:5px; border:1px solid var(--border); border-radius:5px; font-size:11px; font-weight:600; cursor:pointer; background:#fff; }
+    .prod-btn.share { background:var(--green); color:#fff; border-color:var(--green); }
+    .prod-btn.edit  { color:var(--primary); }
+    .prod-btn.del   { color:#DC2626; }
+    /* Product form */
+    .prod-form-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+    @media(max-width:600px){ .prod-form-grid { grid-template-columns:1fr; } }
+    .prod-form-row { display:flex; flex-direction:column; gap:4px; }
+    .prod-form-row label { font-size:12px; font-weight:600; color:var(--muted); }
+    .prod-form-row input, .prod-form-row textarea, .prod-form-row select { padding:7px 10px; border:1px solid var(--border); border-radius:6px; font-size:13px; font-family:inherit; }
+    /* In-chat product picker */
+    #product-picker { display:none; border-top:1px solid var(--border); background:#f9fafb; padding:10px; max-height:260px; overflow-y:auto; }
+    .picker-item { display:flex; align-items:center; gap:10px; padding:8px; border-radius:7px; cursor:pointer; }
+    .picker-item:hover { background:#E9F3FF; }
+    .picker-thumb { width:40px; height:40px; border-radius:5px; object-fit:cover; background:#E5E7EB; display:flex; align-items:center; justify-content:center; font-size:18px; flex-shrink:0; overflow:hidden; }
+    .picker-thumb img { width:100%; height:100%; object-fit:cover; }
+
     /* ── Assets library ─── */
     .asset-dz { border: 2px dashed var(--border); border-radius: 10px; padding: 24px; text-align: center; cursor: pointer; transition: all .2s; background: #fafafa; }
     .asset-dz:hover, .asset-dz.dragover { border-color: var(--green); background: #FDF8EC; }
@@ -328,6 +359,7 @@
     <div class="main-tab active" data-tab="inbox">📥 Inbox</div>
     <div class="main-tab" data-tab="contacts">👥 Contacts</div>
     <div class="main-tab" data-tab="broadcast">📢 Broadcasts</div>
+    <div class="main-tab" data-tab="catalogue">🛍️ Catalogue</div>
     <div class="main-tab" data-tab="templates">📋 Templates</div>
     <div class="main-tab" data-tab="settings">⚙️ Settings</div>
     <a href="/guide.html" target="_blank" style="margin-left:auto;padding:6px 14px;font-size:13px;font-weight:600;color:var(--gold,#C5A041);text-decoration:none;display:flex;align-items:center;gap:5px;border-radius:6px;white-space:nowrap;" title="Open Master Guide">📖 Guide</a>
@@ -357,14 +389,23 @@
       </div>
       <div id="messages-wrap"></div>
       <div id="reply-box">
+        <div id="product-picker">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+            <strong style="font-size:12px">🛍️ Share a product</strong>
+            <input id="picker-search" type="text" placeholder="Search…" style="flex:1;padding:5px 8px;border:1px solid var(--border);border-radius:5px;font-size:12px">
+            <button onclick="closeProductPicker()" style="background:none;border:none;font-size:16px;cursor:pointer;color:var(--muted)">✕</button>
+          </div>
+          <div id="picker-list"></div>
+        </div>
         <div id="reply-inner">
           <textarea id="reply-textarea" rows="1" placeholder="Type a message…"></textarea>
           <div id="reply-actions">
+            <button class="reply-btn" id="share-product-btn" title="Share product from catalogue" style="font-size:15px">🛍️</button>
             <button class="reply-btn ai-sug" id="ai-suggest-btn" title="AI draft">🤖</button>
             <button class="reply-btn send" id="send-btn">➤</button>
           </div>
         </div>
-        <div id="reply-hint">Press <strong>Ctrl+Enter</strong> to send &nbsp;|&nbsp; 🤖 = AI draft</div>
+        <div id="reply-hint">Press <strong>Ctrl+Enter</strong> to send &nbsp;|&nbsp; 🤖 = AI draft &nbsp;|&nbsp; 🛍️ = Share product</div>
       </div>
     </div>
   </div>
@@ -574,6 +615,86 @@
       <div id="bc-history" style="margin-top:16px">
         <div style="color:var(--muted);font-size:13px;text-align:center;padding:20px">Select a business above</div>
       </div>
+    </div>
+  </div>
+
+  <!-- ═══ CATALOGUE ═══ -->
+  <div id="panel-catalogue" class="panel-scroll">
+    <div class="card">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;flex-wrap:wrap">
+        <h3 style="margin:0">🛍️ Product Catalogue</h3>
+        <select id="cat-biz-select" style="padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px"></select>
+        <input id="cat-search" type="text" placeholder="🔍 Search products…" style="padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px;min-width:140px" oninput="filterProductGrid()">
+        <select id="cat-cat-filter" style="padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px" onchange="filterProductGrid()">
+          <option value="">All categories</option>
+        </select>
+        <label style="display:flex;align-items:center;gap:5px;font-size:13px;cursor:pointer">
+          <input type="checkbox" id="cat-instock-only" onchange="loadCatalogue()"> In stock only
+        </label>
+        <button onclick="openProductForm(null)" style="margin-left:auto;background:var(--primary);color:#fff;border:none;padding:7px 16px;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer">+ Add Product</button>
+      </div>
+
+      <!-- Add / Edit form -->
+      <div id="product-form-wrap" style="display:none;border:1px solid var(--border);border-radius:8px;padding:16px;margin-bottom:18px;background:#F9FAFB">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+          <strong id="prod-form-title">Add Product</strong>
+          <button onclick="closeProductForm()" style="background:none;border:none;font-size:18px;cursor:pointer;color:var(--muted)">✕</button>
+        </div>
+        <input type="hidden" id="prod-edit-id">
+        <div class="prod-form-grid">
+          <div class="prod-form-row" style="grid-column:1/-1">
+            <label>Product Name *</label>
+            <input id="pf-name" type="text" placeholder="e.g. Cotton Anarkali Kurta">
+          </div>
+          <div class="prod-form-row">
+            <label>Category *</label>
+            <input id="pf-category" type="text" placeholder="e.g. Kurtas, Sarees, Lehengas">
+          </div>
+          <div class="prod-form-row">
+            <label>SKU / Code</label>
+            <input id="pf-sku" type="text" placeholder="e.g. KRT-001">
+          </div>
+          <div class="prod-form-row">
+            <label>Price (₹)</label>
+            <input id="pf-price" type="number" placeholder="e.g. 1299">
+          </div>
+          <div class="prod-form-row">
+            <label>Stock</label>
+            <select id="pf-instock">
+              <option value="true">In Stock</option>
+              <option value="false">Out of Stock</option>
+            </select>
+          </div>
+          <div class="prod-form-row">
+            <label>Sizes (comma separated)</label>
+            <input id="pf-sizes" type="text" placeholder="e.g. S, M, L, XL, XXL">
+          </div>
+          <div class="prod-form-row">
+            <label>Colors (comma separated)</label>
+            <input id="pf-colors" type="text" placeholder="e.g. Red, Blue, Black">
+          </div>
+          <div class="prod-form-row" style="grid-column:1/-1">
+            <label>Image URL</label>
+            <input id="pf-image" type="url" placeholder="https://… (paste URL or pick from assets)">
+          </div>
+          <div class="prod-form-row" style="grid-column:1/-1">
+            <label>Order / Payment Link</label>
+            <input id="pf-payment" type="url" placeholder="https://… WhatsApp order link or payment page">
+          </div>
+          <div class="prod-form-row" style="grid-column:1/-1">
+            <label>Description</label>
+            <textarea id="pf-desc" rows="3" placeholder="Fabric, style, care instructions…" style="resize:vertical"></textarea>
+          </div>
+        </div>
+        <div style="margin-top:14px;display:flex;gap:8px">
+          <button onclick="saveProduct()" style="background:var(--primary);color:#fff;border:none;padding:8px 20px;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer">💾 Save Product</button>
+          <span id="prod-form-status" style="font-size:12px;color:var(--muted);line-height:2.2"></span>
+        </div>
+      </div>
+
+      <!-- Product grid -->
+      <div id="product-grid" class="prod-grid"></div>
+      <div id="product-empty" style="display:none;text-align:center;padding:40px;color:var(--muted);font-size:13px">No products yet — click + Add Product to get started.</div>
     </div>
   </div>
 
@@ -842,6 +963,7 @@ function populateAllBizSelects() {
     const el = document.getElementById(id);
     if (el) el.innerHTML = opts;
   });
+  populateCatBizSelect();
 }
 
 function switchBusiness(idx) {
@@ -1071,13 +1193,14 @@ document.querySelectorAll('.main-tab').forEach(tab => {
     document.querySelectorAll('.main-tab').forEach(t => t.classList.remove('active'));
     tab.classList.add('active');
     document.getElementById('panel-inbox').style.display = 'none';
-    ['contacts','broadcast','templates','settings'].forEach(p => {
+    ['contacts','broadcast','catalogue','templates','settings'].forEach(p => {
       document.getElementById(`panel-${p}`).style.display = 'none';
     });
     const id = tab.dataset.tab;
     if (id === 'inbox') document.getElementById('panel-inbox').style.display = 'flex';
     else document.getElementById(`panel-${id}`).style.display = 'flex';
     if (id === 'broadcast') loadBroadcastHistory();
+    if (id === 'catalogue') loadCatalogue();
     if (id === 'templates') refreshTemplatesTab();
     if (id === 'settings') renderSettings();
   });
@@ -1590,6 +1713,241 @@ async function init() {
 }
 
 init();
+
+// ══════════════════════════════════════════════════
+// ═══ CATALOGUE TAB ═══════════════════════════════
+// ══════════════════════════════════════════════════
+
+let catalogueProducts = []; // full list for client-side filter
+
+async function loadCatalogue() {
+  const bizId = document.getElementById('cat-biz-select')?.value;
+  if (!bizId) return;
+  const inStock = document.getElementById('cat-instock-only')?.checked;
+  const url = `products?businessId=${bizId}${inStock ? '&inStock=true' : ''}`;
+  try {
+    const data = await api(url);
+    catalogueProducts = data.products || [];
+    populateCatCategoryFilter();
+    filterProductGrid();
+  } catch(e) {
+    document.getElementById('product-grid').innerHTML = `<p style="color:red;font-size:13px">Failed to load: ${e.message}</p>`;
+  }
+}
+
+function populateCatCategoryFilter() {
+  const sel = document.getElementById('cat-cat-filter');
+  const current = sel.value;
+  const cats = [...new Set(catalogueProducts.map(p => p.category))].sort();
+  sel.innerHTML = '<option value="">All categories</option>' +
+    cats.map(c => `<option value="${escHtml(c)}" ${current===c?'selected':''}>${escHtml(c)}</option>`).join('');
+}
+
+function filterProductGrid() {
+  const q    = (document.getElementById('cat-search')?.value || '').toLowerCase();
+  const cat  = document.getElementById('cat-cat-filter')?.value || '';
+  const list = catalogueProducts.filter(p =>
+    (!cat || p.category === cat) &&
+    (!q || [p.name, p.category, p.description, p.sku].join(' ').toLowerCase().includes(q))
+  );
+  renderProductGrid(list);
+}
+
+function renderProductGrid(products) {
+  const grid  = document.getElementById('product-grid');
+  const empty = document.getElementById('product-empty');
+  if (!products.length) {
+    grid.innerHTML = '';
+    empty.style.display = 'block';
+    return;
+  }
+  empty.style.display = 'none';
+  grid.innerHTML = products.map(p => {
+    const priceStr = p.price ? `₹${Number(p.price).toLocaleString('en-IN')}` : '';
+    const sizes    = (p.sizes || []).join(', ');
+    const colors   = (p.colors || []).join(', ');
+    const imgHtml  = p.image_url
+      ? `<img src="${escHtml(p.image_url)}" alt="${escHtml(p.name)}" loading="lazy" onerror="this.style.display='none'">`
+      : '👗';
+    return `
+    <div class="prod-card">
+      <div class="prod-img">${imgHtml}</div>
+      <div class="prod-body">
+        <div class="prod-name">${escHtml(p.name)}</div>
+        <div class="prod-cat">${escHtml(p.category)}${p.sku ? ' · ' + escHtml(p.sku) : ''}</div>
+        ${priceStr ? `<div class="prod-price">${priceStr}</div>` : ''}
+        ${sizes  ? `<div class="prod-attrs">📏 ${escHtml(sizes)}</div>`  : ''}
+        ${colors ? `<div class="prod-attrs">🎨 ${escHtml(colors)}</div>` : ''}
+        <div style="margin-top:4px"><span class="prod-stock-badge ${p.in_stock ? 'in' : 'out'}">${p.in_stock ? '✅ In Stock' : '❌ Out of Stock'}</span></div>
+      </div>
+      <div class="prod-actions">
+        <button class="prod-btn share" onclick="shareProductFromCatalogue(${JSON.stringify(p).replace(/"/g,'&quot;')})">📤 Share</button>
+        <button class="prod-btn edit"  onclick="openProductForm(${JSON.stringify(p).replace(/"/g,'&quot;')})">✏️</button>
+        <button class="prod-btn del"   onclick="deleteProduct('${p.id}','${escHtml(p.name)}')">🗑</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ── Add / Edit form ────────────────────────────────────────────────────────
+function openProductForm(product) {
+  document.getElementById('product-form-wrap').style.display = 'block';
+  document.getElementById('prod-form-title').textContent = product ? 'Edit Product' : 'Add Product';
+  document.getElementById('prod-edit-id').value  = product?.id || '';
+  document.getElementById('pf-name').value       = product?.name || '';
+  document.getElementById('pf-category').value   = product?.category || '';
+  document.getElementById('pf-sku').value        = product?.sku || '';
+  document.getElementById('pf-price').value      = product?.price || '';
+  document.getElementById('pf-instock').value    = product ? String(product.in_stock) : 'true';
+  document.getElementById('pf-sizes').value      = (product?.sizes || []).join(', ');
+  document.getElementById('pf-colors').value     = (product?.colors || []).join(', ');
+  document.getElementById('pf-image').value      = product?.image_url || '';
+  document.getElementById('pf-payment').value    = product?.payment_url || '';
+  document.getElementById('pf-desc').value       = product?.description || '';
+  document.getElementById('prod-form-status').textContent = '';
+  document.getElementById('pf-name').focus();
+  document.getElementById('product-form-wrap').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function closeProductForm() {
+  document.getElementById('product-form-wrap').style.display = 'none';
+}
+
+async function saveProduct() {
+  const id       = document.getElementById('prod-edit-id').value;
+  const bizId    = document.getElementById('cat-biz-select').value;
+  const name     = document.getElementById('pf-name').value.trim();
+  const statusEl = document.getElementById('prod-form-status');
+
+  if (!name) { statusEl.textContent = 'Name is required'; return; }
+
+  const payload = {
+    businessId:  bizId,
+    name,
+    category:    document.getElementById('pf-category').value.trim() || 'Other',
+    sku:         document.getElementById('pf-sku').value.trim(),
+    price:       document.getElementById('pf-price').value,
+    inStock:     document.getElementById('pf-instock').value === 'true',
+    sizes:       document.getElementById('pf-sizes').value,
+    colors:      document.getElementById('pf-colors').value,
+    imageUrl:    document.getElementById('pf-image').value.trim(),
+    paymentUrl:  document.getElementById('pf-payment').value.trim(),
+    description: document.getElementById('pf-desc').value.trim(),
+  };
+
+  statusEl.textContent = 'Saving…';
+  try {
+    const method = id ? 'PATCH' : 'POST';
+    if (id) payload.id = id;
+    const res = await api('products', { method, body: JSON.stringify(payload) });
+    if (res.success) {
+      statusEl.textContent = 'Saved!';
+      closeProductForm();
+      await loadCatalogue();
+    } else {
+      statusEl.textContent = 'Error: ' + (res.error || 'unknown');
+    }
+  } catch(e) {
+    statusEl.textContent = 'Error: ' + e.message;
+  }
+}
+
+async function deleteProduct(id, name) {
+  if (!confirm(`Delete "${name}"?`)) return;
+  try {
+    await api(`products?id=${id}`, { method: 'DELETE' });
+    await loadCatalogue();
+  } catch(e) {
+    toast('Delete failed: ' + e.message);
+  }
+}
+
+// Share from catalogue tab — switch to inbox with the message pre-filled
+function shareProductFromCatalogue(product) {
+  toast('Switch to the Inbox tab, open a chat, then use 🛍️ to pick a product.');
+}
+
+// ── In-chat product picker ─────────────────────────────────────────────────
+let pickerProducts = [];
+
+async function openProductPicker() {
+  const conv = state.currentConv;
+  if (!conv) return;
+  const picker = document.getElementById('product-picker');
+  picker.style.display = picker.style.display === 'none' ? 'block' : 'none';
+  if (picker.style.display === 'none') return;
+
+  const bizId = conv.business_id || (state.businesses.find(b => !b.id.startsWith('__'))?.id);
+  try {
+    const data = await api(`products?businessId=${bizId}&inStock=true`);
+    pickerProducts = data.products || [];
+    renderPickerList(pickerProducts);
+  } catch(e) {
+    document.getElementById('picker-list').innerHTML = '<p style="font-size:12px;color:red;padding:4px">Failed to load products</p>';
+  }
+}
+
+function renderPickerList(products) {
+  const list = document.getElementById('picker-list');
+  if (!products.length) {
+    list.innerHTML = '<p style="font-size:12px;color:var(--muted);padding:4px">No products found.</p>';
+    return;
+  }
+  list.innerHTML = products.map(p => {
+    const price = p.price ? ` · ₹${Number(p.price).toLocaleString('en-IN')}` : '';
+    const thumb = p.image_url
+      ? `<div class="picker-thumb"><img src="${escHtml(p.image_url)}" onerror="this.parentElement.textContent='👗'"></div>`
+      : `<div class="picker-thumb">👗</div>`;
+    return `<div class="picker-item" onclick="insertProductMessage(${JSON.stringify(p).replace(/"/g,'&quot;')})">
+      ${thumb}
+      <div><div style="font-size:13px;font-weight:600">${escHtml(p.name)}</div>
+      <div style="font-size:11px;color:var(--muted)">${escHtml(p.category)}${escHtml(price)}</div></div>
+    </div>`;
+  }).join('');
+}
+
+document.getElementById('picker-search').addEventListener('input', e => {
+  const q = e.target.value.toLowerCase();
+  renderPickerList(q
+    ? pickerProducts.filter(p => [p.name,p.category,p.sku||'',p.description||''].join(' ').toLowerCase().includes(q))
+    : pickerProducts
+  );
+});
+
+function insertProductMessage(p) {
+  const price  = p.price ? `\n💰 *Price:* ₹${Number(p.price).toLocaleString('en-IN')}` : '';
+  const sizes  = (p.sizes||[]).length  ? `\n📏 *Sizes:* ${p.sizes.join(', ')}` : '';
+  const colors = (p.colors||[]).length ? `\n🎨 *Colors:* ${p.colors.join(', ')}` : '';
+  const desc   = p.description ? `\n\n${p.description}` : '';
+  const stock  = p.in_stock ? '\n✅ In Stock' : '\n❌ Out of Stock';
+  const link   = p.payment_url ? `\n\n🛒 Order here: ${p.payment_url}` : '';
+
+  const msg = `🛍️ *${p.name}*${p.sku ? ' (' + p.sku + ')' : ''}${desc}${price}${sizes}${colors}${stock}${link}`;
+
+  const ta = document.getElementById('reply-textarea');
+  ta.value = msg;
+  ta.dispatchEvent(new Event('input'));
+  closeProductPicker();
+  ta.focus();
+}
+
+function closeProductPicker() {
+  document.getElementById('product-picker').style.display = 'none';
+  document.getElementById('picker-search').value = '';
+}
+
+document.getElementById('share-product-btn').addEventListener('click', openProductPicker);
+
+// Populate cat-biz-select when businesses load
+function populateCatBizSelect() {
+  const sel = document.getElementById('cat-biz-select');
+  const realBizs = state.businesses.filter(b => !b.id.startsWith('__'));
+  sel.innerHTML = realBizs.map(b => `<option value="${b.id}">${escHtml(b.name)}</option>`).join('');
+  // Default to Garment Retail if present
+  const garment = realBizs.find(b => b.name.toLowerCase().includes('garment'));
+  if (garment) sel.value = garment.id;
+}
+document.getElementById('cat-biz-select').addEventListener('change', loadCatalogue);
 
 // ══════════════════════════════════════════════════
 // ═══ TEMPLATES TAB ═══════════════════════════════
