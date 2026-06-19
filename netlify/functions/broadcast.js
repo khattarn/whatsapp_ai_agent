@@ -277,82 +277,18 @@ exports.handler = async (event) => {
         contacts.map(c => ({ broadcast_id: broadcast.id, contact_id: c.id, status: 'pending' }))
       );
 
-      // Send messages
-      let sentCount = 0;
-      let failedCount = 0;
-
-      const firstErrors = [];
-
-      for (const contact of contacts) {
-        try {
-          const payload = buildPayload(campaign, contact);
-          const waRes = await sendWhatsAppMessage(biz.access_token, biz.phone_number_id, contact.phone, payload);
-          const msgId = waRes.messages?.[0]?.id;
-          const metaErr = waRes.error ? `${waRes.error.code}: ${waRes.error.message}` : null;
-          const status = msgId ? 'sent' : 'failed';
-
-          if (msgId) sentCount++;
-          else {
-            failedCount++;
-            if (metaErr && firstErrors.length < 3) firstErrors.push({ phone: contact.phone, error: metaErr });
-            console.error(`[broadcast] send failed to ${contact.phone}:`, metaErr || JSON.stringify(waRes));
-          }
-
-          // Update recipient status
-          await supabase
-            .from('broadcast_recipients')
-            .update({ status, meta_message_id: msgId || null, error_message: metaErr, sent_at: new Date().toISOString() })
-            .eq('broadcast_id', broadcast.id)
-            .eq('contact_id', contact.id);
-
-          // Log in open conversation if exists
-          const { data: conv } = await supabase
-            .from('conversations')
-            .select('id')
-            .eq('contact_id', contact.id)
-            .eq('business_id', businessId)
-            .eq('status', 'open')
-            .single();
-
-          if (conv) {
-            await supabase.from('messages').insert({
-              conversation_id: conv.id,
-              from_phone: biz.phone_number_id,
-              to_phone: contact.phone,
-              content: displayMsg,
-              message_type: messageType === 'image' ? 'image' : messageType === 'video' ? 'video' : 'text',
-              direction: 'outbound',
-              sender_type: 'agent',
-              status,
-              meta_message_id: msgId,
-              media_url: mediaUrl || null,
-              timestamp: new Date().toISOString(),
-            });
-          }
-
-          await delay(200); // Rate-limit protection
-        } catch (err) {
-          failedCount++;
-          console.error(`Send failed for ${contact.phone}:`, err.message);
-        }
-      }
-
-      // Finalize broadcast record
-      await supabase
-        .from('broadcasts')
-        .update({ status: 'sent', sent_count: sentCount, failed_count: failedCount })
-        .eq('id', broadcast.id);
-
+      // Return immediately — frontend sends in batches via /api/broadcast-send
+      // to avoid Netlify's 10-second function timeout on large contact lists.
       return {
         statusCode: 200,
         headers,
         body: JSON.stringify({
           success: true,
           broadcastId: broadcast.id,
-          sent: sentCount,
-          failed: failedCount,
           total: contacts.length,
-          ...(firstErrors.length ? { sample_errors: firstErrors } : {}),
+          contacts: contacts.map(c => ({ id: c.id, phone: c.phone, name: c.name || c.phone })),
+          campaign,
+          displayMsg,
         }),
       };
     } catch (err) {

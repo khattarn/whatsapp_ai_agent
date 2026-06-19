@@ -1531,30 +1531,62 @@ document.getElementById('bc-send-btn').addEventListener('click', async () => {
 
   const btn = document.getElementById('bc-send-btn');
   btn.disabled = true;
-  btn.innerHTML = '<span class="spinner"></span> Sending…';
   const result = document.getElementById('bc-result');
 
   try {
+    // Step 1: create broadcast record and get contact list (fast, < 1s)
+    btn.innerHTML = '<span class="spinner"></span> Preparing…';
     const res = await api('broadcast', { method: 'POST', body: JSON.stringify(payload) });
-    if (res.success) {
-      const failNote = res.failed > 0 && res.sample_errors?.length
-        ? `<br><span style="font-size:12px;color:#DC2626">Sample error: ${res.sample_errors[0].error}</span>`
-        : '';
-      result.innerHTML = `<span style="color:${res.failed===0?'green':'#B45309'}">✅ Sent: ${res.sent} | Failed: ${res.failed} | Total: ${res.total}</span>${failNote}`;
-      toast(`✅ Campaign sent to ${res.sent} contacts!`);
-      document.getElementById('bc-name').value = '';
-      document.getElementById('bc-message').value = '';
-      document.getElementById('bc-template-name').value = '';
-      document.getElementById('bc-media-url').value = '';
-      document.getElementById('bc-media-caption').value = '';
-      document.getElementById('bc-vars-list').innerHTML = '';
-      document.getElementById('bc-btns-list').innerHTML = '';
-      loadBroadcastHistory();
-    } else {
-      result.innerHTML = `<span style="color:red">❌ ${res.error}</span>`;
+    if (!res.success) {
+      result.innerHTML = `<span style="color:red">❌ ${res.error || 'Failed to create campaign'}</span>`;
+      return;
     }
+
+    // Step 2: send in batches of 30 so each call stays under the 10s timeout
+    const BATCH = 30;
+    const { broadcastId, contacts: allContacts, campaign: camp, displayMsg, total } = res;
+    let totalSent = 0, totalFailed = 0, firstError = null;
+
+    for (let i = 0; i < allContacts.length; i += BATCH) {
+      const batch = allContacts.slice(i, i + BATCH);
+      const isFinal = i + BATCH >= allContacts.length;
+      result.innerHTML = `<span style="color:var(--muted)">⏳ Sending ${Math.min(i + BATCH, total)} / ${total}…</span>`;
+
+      const bRes = await api('broadcast-send', {
+        method: 'POST',
+        body: JSON.stringify({
+          broadcastId,
+          businessId: payload.businessId,
+          contacts: batch,
+          campaign: camp,
+          displayMsg,
+          isFinal,
+          runningTotals: { sent: totalSent, failed: totalFailed },
+        }),
+      });
+
+      if (!bRes.success) {
+        result.innerHTML = `<span style="color:red">❌ Batch error: ${bRes.error || 'unknown'}</span>`;
+        return;
+      }
+      totalSent  += bRes.sent;
+      totalFailed += bRes.failed;
+      if (!firstError && bRes.sample_errors?.length) firstError = bRes.sample_errors[0].error;
+    }
+
+    const failNote = firstError ? `<br><span style="font-size:12px;color:#DC2626">Sample error: ${firstError}</span>` : '';
+    result.innerHTML = `<span style="color:${totalFailed===0?'green':'#B45309'}">✅ Sent: ${totalSent} | Failed: ${totalFailed} | Total: ${total}</span>${failNote}`;
+    toast(`✅ Campaign sent to ${totalSent} contacts!`);
+    document.getElementById('bc-name').value = '';
+    document.getElementById('bc-message').value = '';
+    document.getElementById('bc-template-name').value = '';
+    document.getElementById('bc-media-url').value = '';
+    document.getElementById('bc-media-caption').value = '';
+    document.getElementById('bc-vars-list').innerHTML = '';
+    document.getElementById('bc-btns-list').innerHTML = '';
+    loadBroadcastHistory();
   } catch (e) {
-    result.innerHTML = `<span style="color:red">❌ Network error</span>`;
+    result.innerHTML = `<span style="color:red">❌ ${e.message || 'Network error'}</span>`;
   } finally {
     btn.disabled = false;
     btn.textContent = '📤 Send Campaign';
