@@ -301,7 +301,7 @@ exports.handler = async (event) => {
           // Update recipient status
           await supabase
             .from('broadcast_recipients')
-            .update({ status, meta_message_id: msgId || null, error_message: metaErr || null, sent_at: new Date().toISOString() })
+            .update({ status, meta_message_id: msgId || null, error_message: metaErr, sent_at: new Date().toISOString() })
             .eq('broadcast_id', broadcast.id)
             .eq('contact_id', contact.id);
 
