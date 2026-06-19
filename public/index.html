@@ -1308,9 +1308,12 @@ document.getElementById('import-btn').addEventListener('click', async () => {
       body: JSON.stringify({ businessId: bizId, contacts: state.csvRows }),
     });
     if (res.success) {
-      result.innerHTML = `<span style="color:green">✅ Imported ${res.imported} contacts (${res.skipped || 0} skipped)</span>`;
+      const sciWarn = res.scientific_notation_skipped > 0
+        ? `<br><span style="color:#B45309;font-size:12px">⚠️ ${res.scientific_notation_skipped} numbers skipped — Excel converted them to scientific notation (e.g. 9.19877E+11). In Excel: select the phone column → Format Cells → Text → re-save as CSV.</span>`
+        : '';
+      const dupNote = res.duplicates_merged > 0 ? `, ${res.duplicates_merged} duplicates merged` : '';
+      result.innerHTML = `<span style="color:green">✅ Imported ${res.imported} contacts (${res.skipped || 0} skipped${dupNote})</span>${sciWarn}`;
       toast(`✅ ${res.imported} contacts imported!`);
-      // Auto-refresh contact list
       document.getElementById('ct-list-biz-select').value = bizId;
       loadContactList();
     } else {

@@ -49,25 +49,44 @@ exports.handler = async (event) => {
       const now = new Date().toISOString();
 
       // Clean and validate each row
-      const validRows = contacts
-        .map(c => ({
-          phone: String(c.phone || '').replace(/[\s\-\(\)\+\.]/g, ''),
-          name: (String(c.name || '')).trim() || String(c.phone),
-          business_id: businessId,
-          opted_in: true,
-          tags: Array.isArray(c.tags)
-            ? c.tags.map(t => String(t).trim()).filter(Boolean)
-            : (c.tags ? String(c.tags).split(',').map(t => t.trim()).filter(Boolean) : []),
-          last_seen: now,
-        }))
-        .filter(r => r.phone.length >= 7 && /^\d+$/.test(r.phone));
+      let scientificCount = 0;
+      const validRows = [];
+
+      for (const c of contacts) {
+        const rawPhone = String(c.phone || '').trim();
+        const cleaned = rawPhone.replace(/[\s\-\(\)\+\.]/g, '');
+
+        // Detect Excel scientific notation (e.g. 9.19877E+11) — phone digits are lost,
+        // user must reformat the column as Text in Excel before re-exporting.
+        if (/^[\d.]+[eE][+\-]?\d+$/.test(rawPhone.replace(/\s/g, ''))) {
+          scientificCount++;
+          continue;
+        }
+
+        if (cleaned.length >= 7 && /^\d+$/.test(cleaned)) {
+          validRows.push({
+            phone: cleaned,
+            name: (String(c.name || '')).trim() || rawPhone,
+            business_id: businessId,
+            opted_in: true,
+            tags: Array.isArray(c.tags)
+              ? c.tags.map(t => String(t).trim()).filter(Boolean)
+              : (c.tags ? String(c.tags).split(',').map(t => t.trim()).filter(Boolean) : []),
+            last_seen: now,
+          });
+        }
+      }
 
       if (!validRows.length) {
+        const sciMsg = scientificCount
+          ? ` ${scientificCount} numbers were in Excel scientific notation (e.g. 9.19877E+11) — select the phone column in Excel, format as Text, then re-export as CSV.`
+          : '';
         return {
           statusCode: 400,
           headers,
           body: JSON.stringify({
-            error: 'No valid contacts found. Phone must be digits only with country code (e.g. 919876543210 for India).',
+            error: `No valid contacts found.${sciMsg}`,
+            scientific_notation_skipped: scientificCount,
           }),
         };
       }
@@ -100,8 +119,9 @@ exports.handler = async (event) => {
           success: true,
           imported: totalUpserted,
           total: contacts.length,
-          skipped: contacts.length - validRows.length,
+          skipped: contacts.length - validRows.length - scientificCount,
           duplicates_merged: duplicatesInCsv,
+          scientific_notation_skipped: scientificCount,
         }),
       };
     } catch (err) {
