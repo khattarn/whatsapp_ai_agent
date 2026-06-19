@@ -571,8 +571,11 @@
       <div id="bc-media-fields" style="display:none">
         <div class="form-row">
           <label id="bc-media-label">Media URL <span style="font-weight:400;color:var(--muted)">(publicly accessible HTTPS link)</span></label>
+          <select id="bc-media-asset-select" style="width:100%;margin-bottom:6px">
+            <option value="">— pick from saved assets or paste URL below —</option>
+          </select>
           <input type="url" id="bc-media-url" placeholder="https://example.com/image.jpg" />
-          <div style="font-size:11px;color:var(--muted);margin-top:4px">Tip: Use Google Drive (set to Anyone with link), Dropbox public link, or any CDN.</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:4px">Tip: Upload assets in the Assets Library tab, or paste any public HTTPS URL.</div>
         </div>
         <div class="form-row" id="bc-media-type-row" style="display:none">
           <label>Media Type in Template Header</label>
@@ -1396,6 +1399,7 @@ function updateBroadcastFields() {
   document.getElementById('bc-text-fields').style.display = isText ? 'block' : 'none';
   document.getElementById('bc-template-fields').style.display = isTpl ? 'block' : 'none';
   if (isTpl) loadBroadcastTemplates();
+  if (isTpl || isImg || isVid) loadBroadcastAssets();
   document.getElementById('bc-media-fields').style.display = (isTpl || isImg || isVid) ? 'block' : 'none';
   document.getElementById('bc-media-type-row').style.display = isTpl ? 'block' : 'none';
   document.getElementById('bc-caption-row').style.display = (isImg || isVid) ? 'block' : 'none';
@@ -1512,6 +1516,7 @@ document.getElementById('bc-biz-select').addEventListener('change', () => {
   document.getElementById('bc-hist-biz-select').value = document.getElementById('bc-biz-select').value;
   loadBroadcastHistory();
   loadBroadcastTemplates();
+  loadBroadcastAssets();
 });
 
 // Populate bc-template-select with APPROVED templates for the selected business
@@ -1533,6 +1538,31 @@ async function loadBroadcastTemplates() {
     sel.innerHTML = '<option value="">Error loading templates</option>';
   }
 }
+
+async function loadBroadcastAssets() {
+  const bizId = document.getElementById('bc-biz-select').value;
+  const sel = document.getElementById('bc-media-asset-select');
+  if (!bizId) { sel.innerHTML = '<option value="">— select a business first —</option>'; return; }
+  try {
+    const data = await api(`upload-asset?businessId=${bizId}`);
+    const assets = (data.assets || []).filter(a =>
+      a.contentType.startsWith('image/') || a.contentType.startsWith('video/')
+    );
+    if (!assets.length) {
+      sel.innerHTML = '<option value="">— no images/videos in Assets Library —</option>';
+      return;
+    }
+    sel.innerHTML = '<option value="">— pick from saved assets or paste URL below —</option>' +
+      assets.map(a => `<option value="${escHtml(a.url)}">${escHtml(a.name)}</option>`).join('');
+  } catch (e) {
+    sel.innerHTML = '<option value="">Error loading assets</option>';
+  }
+}
+
+document.getElementById('bc-media-asset-select').addEventListener('change', function() {
+  if (this.value) document.getElementById('bc-media-url').value = this.value;
+  updatePreview();
+});
 
 document.getElementById('bc-template-select').addEventListener('change', function() {
   const opt = this.options[this.selectedIndex];
@@ -1661,6 +1691,7 @@ document.getElementById('bc-send-btn').addEventListener('click', async () => {
     document.getElementById('bc-message').value = '';
     document.getElementById('bc-template-name').value = '';
     document.getElementById('bc-template-select').value = '';
+    document.getElementById('bc-media-asset-select').value = '';
     document.getElementById('bc-media-url').value = '';
     document.getElementById('bc-media-caption').value = '';
     document.getElementById('bc-vars-list').innerHTML = '';
