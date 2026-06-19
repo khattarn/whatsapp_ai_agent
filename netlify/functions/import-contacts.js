@@ -49,7 +49,7 @@ exports.handler = async (event) => {
       const now = new Date().toISOString();
 
       // Clean and validate each row
-      const rows = contacts
+      const validRows = contacts
         .map(c => ({
           phone: String(c.phone || '').replace(/[\s\-\(\)\+\.]/g, ''),
           name: (String(c.name || '')).trim() || String(c.phone),
@@ -62,7 +62,7 @@ exports.handler = async (event) => {
         }))
         .filter(r => r.phone.length >= 7 && /^\d+$/.test(r.phone));
 
-      if (!rows.length) {
+      if (!validRows.length) {
         return {
           statusCode: 400,
           headers,
@@ -72,22 +72,36 @@ exports.handler = async (event) => {
         };
       }
 
-      // Upsert — updates existing contacts, inserts new ones
-      const { data, error } = await supabase
-        .from('contacts')
-        .upsert(rows, { onConflict: 'phone,business_id', ignoreDuplicates: false })
-        .select('id');
+      // Deduplicate by phone — CSV may contain the same number more than once;
+      // PostgreSQL ON CONFLICT UPDATE cannot touch the same row twice in one batch.
+      const seen = new Map();
+      for (const row of validRows) seen.set(row.phone, row);
+      const rows = Array.from(seen.values());
 
-      if (error) throw error;
+      // Upsert in chunks of 100 to stay within Supabase payload limits
+      const CHUNK = 100;
+      let totalUpserted = 0;
+      for (let i = 0; i < rows.length; i += CHUNK) {
+        const chunk = rows.slice(i, i + CHUNK);
+        const { data: upserted, error } = await supabase
+          .from('contacts')
+          .upsert(chunk, { onConflict: 'phone,business_id', ignoreDuplicates: false })
+          .select('id');
+        if (error) throw error;
+        totalUpserted += upserted?.length || chunk.length;
+      }
+
+      const duplicatesInCsv = validRows.length - rows.length;
 
       return {
         statusCode: 200,
         headers,
         body: JSON.stringify({
           success: true,
-          imported: data?.length || rows.length,
+          imported: totalUpserted,
           total: contacts.length,
-          skipped: contacts.length - rows.length,
+          skipped: contacts.length - validRows.length,
+          duplicates_merged: duplicatesInCsv,
         }),
       };
     } catch (err) {

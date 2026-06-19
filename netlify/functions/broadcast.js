@@ -281,20 +281,27 @@ exports.handler = async (event) => {
       let sentCount = 0;
       let failedCount = 0;
 
+      const firstErrors = [];
+
       for (const contact of contacts) {
         try {
           const payload = buildPayload(campaign, contact);
           const waRes = await sendWhatsAppMessage(biz.access_token, biz.phone_number_id, contact.phone, payload);
           const msgId = waRes.messages?.[0]?.id;
+          const metaErr = waRes.error ? `${waRes.error.code}: ${waRes.error.message}` : null;
           const status = msgId ? 'sent' : 'failed';
 
           if (msgId) sentCount++;
-          else failedCount++;
+          else {
+            failedCount++;
+            if (metaErr && firstErrors.length < 3) firstErrors.push({ phone: contact.phone, error: metaErr });
+            console.error(`[broadcast] send failed to ${contact.phone}:`, metaErr || JSON.stringify(waRes));
+          }
 
           // Update recipient status
           await supabase
             .from('broadcast_recipients')
-            .update({ status, meta_message_id: msgId, sent_at: new Date().toISOString() })
+            .update({ status, meta_message_id: msgId || null, error_message: metaErr || null, sent_at: new Date().toISOString() })
             .eq('broadcast_id', broadcast.id)
             .eq('contact_id', contact.id);
 
@@ -345,6 +352,7 @@ exports.handler = async (event) => {
           sent: sentCount,
           failed: failedCount,
           total: contacts.length,
+          ...(firstErrors.length ? { sample_errors: firstErrors } : {}),
         }),
       };
     } catch (err) {
