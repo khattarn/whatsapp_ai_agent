@@ -192,6 +192,31 @@
     /* ── Settings panel ─── */
     .setting-group { margin-bottom: 20px; }
 
+    /* ── Assets library ─── */
+    .asset-dz { border: 2px dashed var(--border); border-radius: 10px; padding: 24px; text-align: center; cursor: pointer; transition: all .2s; background: #fafafa; }
+    .asset-dz:hover, .asset-dz.dragover { border-color: var(--green); background: #FDF8EC; }
+    .asset-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 8px; margin-top: 12px; }
+    .asset-card { border: 1px solid var(--border); border-radius: 8px; overflow: hidden; background: #fff; position: relative; }
+    .asset-card.selected { border-color: var(--green); box-shadow: 0 0 0 2px var(--green); }
+    .asset-thumb { width: 100%; aspect-ratio: 1; object-fit: cover; display: block; background: #f3f4f6; }
+    .asset-thumb-placeholder { width: 100%; aspect-ratio: 1; display: flex; align-items: center; justify-content: center; font-size: 28px; background: #f3f4f6; }
+    .asset-footer { padding: 4px 6px; display: flex; gap: 3px; align-items: center; }
+    .asset-fname { flex: 1; font-size: 10px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .asset-copy-btn { font-size: 10px; background: #E0F2FE; color: #0369A1; border: none; border-radius: 4px; padding: 2px 6px; cursor: pointer; white-space: nowrap; }
+    .asset-del-btn  { font-size: 10px; background: #FEE2E2; color: #DC2626; border: none; border-radius: 4px; padding: 2px 5px; cursor: pointer; }
+    /* Asset picker modal */
+    #asset-picker-modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.5); z-index: 2000; align-items: center; justify-content: center; padding: 16px; }
+    #asset-picker-modal.show { display: flex; }
+    .picker-inner { background: #fff; border-radius: 12px; width: 640px; max-width: 100%; max-height: 80vh; display: flex; flex-direction: column; overflow: hidden; }
+    .picker-head { padding: 14px 18px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
+    .picker-head h4 { font-size: 15px; font-weight: 700; }
+    .picker-close { background: none; border: none; cursor: pointer; font-size: 20px; color: var(--muted); line-height: 1; }
+    .picker-body { flex: 1; overflow-y: auto; padding: 16px; }
+    /* Template notification banner */
+    .tpl-notif-banner { background: #DCFCE7; border: 1px solid #86EFAC; border-radius: 8px; padding: 10px 14px; font-size: 13px; color: #166534; display: flex; align-items: flex-start; gap: 10px; margin-bottom: 8px; }
+    .tpl-notif-banner.rejected { background: #FEE2E2; border-color: #FCA5A5; color: #991B1B; }
+    .notif-dismiss { background: none; border: none; cursor: pointer; font-size: 18px; line-height: 1; color: inherit; flex-shrink: 0; }
+
     /* ── Templates panel ─── */
     .tpl-card { border: 1px solid var(--border); border-radius: 10px; padding: 14px; margin-bottom: 12px; background: #fafafa; }
     .tpl-card-header { display: flex; align-items: flex-start; gap: 8px; }
@@ -554,6 +579,32 @@
   <!-- ═══ TEMPLATES ═══ -->
   <div id="panel-templates" class="panel-scroll">
 
+    <!-- Approval notifications (populated by JS) -->
+    <div id="tpl-notifications"></div>
+
+    <!-- Assets Library Card -->
+    <div class="card">
+      <h3>🖼️ Assets Library</h3>
+      <p style="font-size:13px;color:var(--muted);margin-bottom:12px">Upload images, videos, or documents here. Copy the public URL to use in template headers and broadcasts.</p>
+
+      <div class="form-row">
+        <label>Business</label>
+        <select id="asset-biz-select"></select>
+      </div>
+
+      <div class="asset-dz" id="asset-drop-zone">
+        <div style="font-size:32px;margin-bottom:6px">📁</div>
+        <div style="font-weight:600;font-size:14px;margin-bottom:4px">Drop files here or click to browse</div>
+        <div style="font-size:12px;color:var(--muted)">JPEG, PNG, GIF, WebP, MP4, PDF · Max 10 MB</div>
+        <input type="file" id="asset-file-input" accept="image/*,video/mp4,application/pdf" multiple style="display:none" />
+      </div>
+      <div id="asset-upload-progress" style="font-size:13px;margin-top:8px"></div>
+
+      <div id="asset-gallery" style="margin-top:4px">
+        <div style="color:var(--muted);font-size:13px;text-align:center;padding:16px">Select a business above to load assets</div>
+      </div>
+    </div>
+
     <!-- Create Template Card -->
     <div class="card">
       <h3>➕ Create New Template</h3>
@@ -608,9 +659,16 @@
         </div>
         <div id="tpl-header-ex-fields"></div>
       </div>
-      <div id="tpl-header-media-note" style="display:none">
+      <div id="tpl-header-media-fields" style="display:none">
+        <div class="form-row">
+          <label>Header Media URL <span style="font-weight:400;color:var(--muted)">— paste a public URL or pick from Assets Library</span></label>
+          <div style="display:flex;gap:8px;align-items:center">
+            <input type="url" id="tpl-header-media-url" style="flex:1;padding:10px 14px;border-radius:8px;border:1px solid var(--border);font-size:14px;outline:none" placeholder="https://… or pick from Assets Library →" />
+            <button type="button" class="btn-secondary" style="white-space:nowrap" onclick="openAssetPicker('tpl-header-media-url')">📁 Browse Assets</button>
+          </div>
+        </div>
         <div class="info-box" style="font-size:12px">
-          The actual media file (image/video/document) is supplied at send time via the <strong>Broadcasts</strong> tab — nothing extra needed here. Meta will mark the header format in the template.
+          This URL is saved for your reference and used in Broadcasts. Meta reviews the template format (Image/Video/Document) — the actual file is sent at broadcast time.
         </div>
       </div>
 
@@ -692,6 +750,21 @@
   </div>
 </div>
 
+<!-- Asset Picker Modal -->
+<div id="asset-picker-modal">
+  <div class="picker-inner">
+    <div class="picker-head">
+      <h4>📁 Pick from Assets Library</h4>
+      <button class="picker-close" onclick="closeAssetPicker()">✕</button>
+    </div>
+    <div class="picker-body">
+      <div id="picker-gallery">
+        <div style="color:var(--muted);font-size:13px;text-align:center;padding:24px">Loading assets…</div>
+      </div>
+    </div>
+  </div>
+</div>
+
 <div id="toast"></div>
 
 <script>
@@ -764,7 +837,7 @@ function renderBizTabs() {
 function populateAllBizSelects() {
   const opts = '<option value="">Select business…</option>' +
     state.businesses.map(b => `<option value="${b.id}">${b.name}</option>`).join('');
-  ['bc-biz-select', 'bc-hist-biz-select', 'ct-biz-select', 'ct-list-biz-select', 'tpl-biz-select', 'tpl-list-biz'].forEach(id => {
+  ['bc-biz-select', 'bc-hist-biz-select', 'ct-biz-select', 'ct-list-biz-select', 'tpl-biz-select', 'tpl-list-biz', 'asset-biz-select'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.innerHTML = opts;
   });
@@ -1004,7 +1077,7 @@ document.querySelectorAll('.main-tab').forEach(tab => {
     if (id === 'inbox') document.getElementById('panel-inbox').style.display = 'flex';
     else document.getElementById(`panel-${id}`).style.display = 'flex';
     if (id === 'broadcast') loadBroadcastHistory();
-    if (id === 'templates') loadTemplateList();
+    if (id === 'templates') refreshTemplatesTab();
     if (id === 'settings') renderSettings();
   });
 });
@@ -1518,7 +1591,7 @@ function countVars(text) {
 function updateHeaderFields() {
   const type = document.getElementById('tpl-header-type').value;
   document.getElementById('tpl-header-text-fields').style.display = type === 'TEXT' ? 'block' : 'none';
-  document.getElementById('tpl-header-media-note').style.display = ['IMAGE','VIDEO','DOCUMENT'].includes(type) ? 'block' : 'none';
+  document.getElementById('tpl-header-media-fields').style.display = ['IMAGE','VIDEO','DOCUMENT'].includes(type) ? 'block' : 'none';
   updateExamples();
 }
 
@@ -1681,7 +1754,7 @@ document.getElementById('tpl-submit-btn').addEventListener('click', async () => 
       result.innerHTML = `<span style="color:green">✅ Submitted! Template ID: ${escHtml(res.id)} · Status: ${escHtml(res.status || 'PENDING')}</span>`;
       toast('✅ Template submitted for Meta review');
       // Reset form
-      ['tpl-name','tpl-body','tpl-footer','tpl-header-text'].forEach(id => { document.getElementById(id).value = ''; });
+      ['tpl-name','tpl-body','tpl-footer','tpl-header-text','tpl-header-media-url'].forEach(id => { const el = document.getElementById(id); if(el) el.value = ''; });
       document.getElementById('tpl-header-type').value = 'NONE';
       document.getElementById('tpl-btns-list').innerHTML = '';
       updateHeaderFields();
@@ -1770,8 +1843,196 @@ async function deleteTemplate(templateId, templateName) {
 document.getElementById('tpl-load-btn').addEventListener('click', loadTemplateList);
 document.getElementById('tpl-list-biz').addEventListener('change', loadTemplateList);
 document.getElementById('tpl-biz-select').addEventListener('change', () => {
-  document.getElementById('tpl-list-biz').value = document.getElementById('tpl-biz-select').value;
+  const id = document.getElementById('tpl-biz-select').value;
+  document.getElementById('tpl-list-biz').value = id;
+  document.getElementById('asset-biz-select').value = id;
 });
+
+// ══════════════════════════════════════════════════
+// ═══ ASSETS LIBRARY ══════════════════════════════
+// ══════════════════════════════════════════════════
+
+let _pickerTargetId = null;   // input field to populate after pick
+
+function isImage(name) { return /\.(jpe?g|png|gif|webp)$/i.test(name); }
+
+function assetIcon(name) {
+  if (isImage(name)) return null;
+  if (/\.mp4$/i.test(name)) return '🎬';
+  if (/\.pdf$/i.test(name)) return '📄';
+  return '📎';
+}
+
+function renderAssetGrid(assets, containerId, mode) {
+  // mode: 'library' shows copy+delete; 'picker' shows select button
+  const el = document.getElementById(containerId);
+  if (!assets.length) { el.innerHTML = '<div style="color:var(--muted);font-size:13px;text-align:center;padding:20px">No assets uploaded yet</div>'; return; }
+  el.innerHTML = `<div class="asset-grid">${assets.map(a => {
+    const icon = assetIcon(a.name);
+    const thumb = icon
+      ? `<div class="asset-thumb-placeholder">${icon}</div>`
+      : `<img class="asset-thumb" src="${escHtml(a.url)}" alt="${escHtml(a.name)}" loading="lazy" />`;
+    const safePath = encodeURIComponent(a.path);
+    const safeUrl  = escHtml(a.url);
+    const buttons  = mode === 'picker'
+      ? `<button class="asset-copy-btn" style="background:var(--green);color:#fff" onclick="pickAsset('${safeUrl}')">✔ Use</button>`
+      : `<button class="asset-copy-btn" onclick="copyAssetUrl('${safeUrl}')">📋 Copy URL</button>
+         <button class="asset-del-btn"  onclick="deleteAsset('${safePath}')">🗑</button>`;
+    return `<div class="asset-card">
+      ${thumb}
+      <div class="asset-footer">
+        <span class="asset-fname" title="${escHtml(a.name)}">${escHtml(a.name.replace(/^\d+-/, ''))}</span>
+      </div>
+      <div style="padding:0 6px 6px;display:flex;gap:3px">${buttons}</div>
+    </div>`;
+  }).join('')}</div>`;
+}
+
+async function loadAssets(containerId = 'asset-gallery', mode = 'library') {
+  const bizId = document.getElementById('asset-biz-select').value;
+  const el = document.getElementById(containerId);
+  if (!bizId) { el.innerHTML = '<div style="color:var(--muted);font-size:13px;text-align:center;padding:16px">Select a business above to load assets</div>'; return; }
+  el.innerHTML = '<div style="text-align:center;padding:16px"><span class="spinner dark"></span></div>';
+  try {
+    const data = await api(`upload-asset?businessId=${bizId}`);
+    renderAssetGrid(data.assets || [], containerId, mode);
+  } catch (e) {
+    el.innerHTML = '<div style="color:red;font-size:13px;text-align:center;padding:16px">Failed to load assets</div>';
+  }
+}
+
+function copyAssetUrl(url) {
+  navigator.clipboard.writeText(url).then(() => toast('📋 URL copied!')).catch(() => {
+    const ta = document.createElement('textarea');
+    ta.value = url; document.body.appendChild(ta); ta.select();
+    document.execCommand('copy'); document.body.removeChild(ta);
+    toast('📋 URL copied!');
+  });
+}
+
+async function deleteAsset(encodedPath) {
+  const path = decodeURIComponent(encodedPath);
+  const bizId = document.getElementById('asset-biz-select').value;
+  if (!confirm(`Delete asset "${path.split('/').pop()}"?`)) return;
+  try {
+    const res = await api(`upload-asset?businessId=${bizId}&path=${encodedPath}`, { method: 'DELETE' });
+    if (res.success) { toast('✅ Asset deleted'); loadAssets(); }
+    else toast('❌ ' + (res.error || 'Delete failed'));
+  } catch (e) { toast('❌ Network error'); }
+}
+
+async function uploadFiles(files, bizId) {
+  const progress = document.getElementById('asset-upload-progress');
+  let done = 0;
+  for (const file of files) {
+    progress.innerHTML = `<span class="spinner dark"></span> Uploading ${done + 1}/${files.length}: ${escHtml(file.name)}…`;
+    try {
+      const fileData = await new Promise((res, rej) => {
+        const r = new FileReader();
+        r.onload = e => res(e.target.result.split(',')[1]);
+        r.onerror = rej;
+        r.readAsDataURL(file);
+      });
+      const resp = await api('upload-asset', {
+        method: 'POST',
+        body: JSON.stringify({ businessId: bizId, fileName: file.name, fileType: file.type || 'application/octet-stream', fileData }),
+      });
+      if (!resp.success) { toast('❌ ' + (resp.error || `Failed to upload ${file.name}`)); }
+      else done++;
+    } catch (e) { toast(`❌ Error uploading ${file.name}`); }
+  }
+  progress.innerHTML = done > 0 ? `<span style="color:green">✅ ${done} file${done !== 1 ? 's' : ''} uploaded</span>` : '';
+  if (done > 0) loadAssets();
+  setTimeout(() => { progress.innerHTML = ''; }, 4000);
+}
+
+// Drop zone
+const assetDz = document.getElementById('asset-drop-zone');
+assetDz.addEventListener('click', () => document.getElementById('asset-file-input').click());
+assetDz.addEventListener('dragover', e => { e.preventDefault(); assetDz.classList.add('dragover'); });
+assetDz.addEventListener('dragleave', () => assetDz.classList.remove('dragover'));
+assetDz.addEventListener('drop', e => {
+  e.preventDefault(); assetDz.classList.remove('dragover');
+  const bizId = document.getElementById('asset-biz-select').value;
+  if (!bizId) { toast('Select a business first'); return; }
+  if (e.dataTransfer.files.length) uploadFiles([...e.dataTransfer.files], bizId);
+});
+document.getElementById('asset-file-input').addEventListener('change', e => {
+  const bizId = document.getElementById('asset-biz-select').value;
+  if (!bizId) { toast('Select a business first'); return; }
+  if (e.target.files.length) { uploadFiles([...e.target.files], bizId); e.target.value = ''; }
+});
+document.getElementById('asset-biz-select').addEventListener('change', () => loadAssets());
+
+// Asset picker modal
+function openAssetPicker(targetInputId) {
+  _pickerTargetId = targetInputId;
+  const modal = document.getElementById('asset-picker-modal');
+  modal.classList.add('show');
+  // Load assets using the template biz select
+  const bizId = document.getElementById('tpl-biz-select').value ||
+                document.getElementById('asset-biz-select').value;
+  const el = document.getElementById('picker-gallery');
+  if (!bizId) { el.innerHTML = '<div style="color:var(--muted);font-size:13px;text-align:center;padding:20px">Select a business in the Create Template form first</div>'; return; }
+  el.innerHTML = '<div style="text-align:center;padding:24px"><span class="spinner dark"></span></div>';
+  api(`upload-asset?businessId=${bizId}`).then(data => {
+    renderAssetGrid(data.assets || [], 'picker-gallery', 'picker');
+  }).catch(() => {
+    el.innerHTML = '<div style="color:red;font-size:13px;text-align:center;padding:20px">Failed to load assets</div>';
+  });
+}
+
+function closeAssetPicker() {
+  document.getElementById('asset-picker-modal').classList.remove('show');
+  _pickerTargetId = null;
+}
+
+function pickAsset(url) {
+  if (_pickerTargetId) {
+    document.getElementById(_pickerTargetId).value = url;
+  }
+  closeAssetPicker();
+  toast('✅ Asset URL selected');
+}
+
+document.getElementById('asset-picker-modal').addEventListener('click', e => {
+  if (e.target === document.getElementById('asset-picker-modal')) closeAssetPicker();
+});
+
+// ══════════════════════════════════════════════════
+// ═══ TEMPLATE APPROVAL NOTIFICATIONS ═════════════
+// ══════════════════════════════════════════════════
+
+async function loadTemplateNotifications() {
+  const container = document.getElementById('tpl-notifications');
+  try {
+    const data = await api('template-notifications');
+    const notifs = data.notifications || [];
+    if (!notifs.length) { container.innerHTML = ''; return; }
+
+    container.innerHTML = notifs.map(n => {
+      const approved = n.event === 'APPROVED';
+      const emoji = approved ? '✅' : n.event === 'REJECTED' ? '❌' : '⚠️';
+      const cls   = approved ? '' : 'rejected';
+      return `<div class="tpl-notif-banner ${cls}">
+        <span style="flex:1">${emoji} Template <strong>${escHtml(n.template_name)}</strong>${n.language ? ' (' + escHtml(n.language) + ')' : ''} was <strong>${escHtml(n.event)}</strong>${n.reason ? ' — ' + escHtml(n.reason) : ''}.</span>
+        <button class="notif-dismiss" onclick="dismissNotification('${n.id}', this.closest('.tpl-notif-banner'))">✕</button>
+      </div>`;
+    }).join('');
+  } catch (e) {
+    // template_notifications table may not exist yet (migration v6 not run) — silently skip
+  }
+}
+
+async function dismissNotification(id, el) {
+  el.remove();
+  try { await api('template-notifications', { method: 'POST', body: JSON.stringify({ ids: [id] }) }); }
+  catch (_) {}
+}
+
+async function refreshTemplatesTab() {
+  await Promise.all([loadTemplateList(), loadTemplateNotifications()]);
+}
 </script>
 </body>
 </html>

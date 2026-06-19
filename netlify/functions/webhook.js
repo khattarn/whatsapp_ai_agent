@@ -435,6 +435,22 @@ exports.handler = async (event) => {
     try {
       const body = JSON.parse(event.body || '{}');
       const entry = body.entry?.[0];
+
+      // ── Template status updates (APPROVED / REJECTED / PAUSED) ───────────
+      for (const change of (entry?.changes || [])) {
+        if (change.field === 'message_template_status_update') {
+          const v = change.value || {};
+          await supabase.from('template_notifications').insert({
+            template_id:   String(v.message_template_id || ''),
+            template_name: v.message_template_name || '',
+            language:      v.message_template_language || null,
+            event:         v.event || 'UNKNOWN',
+            reason:        v.reason || null,
+          });
+          console.log('[webhook] template status update:', v.message_template_name, v.event);
+        }
+      }
+
       const change = entry?.changes?.[0];
       const value = change?.value;
 
