@@ -1656,7 +1656,8 @@ function addTplButton() {
       <option value="PHONE_NUMBER">📞 Phone</option>
     </select>
     <input type="text" class="tpl-btn-text" placeholder="Button label (max 25)" maxlength="25" />
-    <input type="text" class="tpl-btn-value" placeholder="(not needed for Quick Reply)" style="display:none" />
+    <input type="text" class="tpl-btn-value" placeholder="(not needed for Quick Reply)" style="display:none" oninput="checkBtnUrlVar(this)" />
+    <input type="text" class="tpl-btn-url-ex" placeholder="Example URL suffix for {{1}} (e.g. order-12345)" style="display:none;font-size:12px;color:var(--muted)" />
     <button class="tpl-rm-btn" onclick="this.closest('.tpl-btn-row').remove()">✕</button>`;
   list.appendChild(div);
 }
@@ -1664,16 +1665,25 @@ function addTplButton() {
 function updateTplBtnFields(sel) {
   const row = sel.closest('.tpl-btn-row');
   const valueInput = row.querySelector('.tpl-btn-value');
+  const urlExInput = row.querySelector('.tpl-btn-url-ex');
   const type = sel.value;
   if (type === 'QUICK_REPLY') {
     valueInput.style.display = 'none';
+    if (urlExInput) urlExInput.style.display = 'none';
   } else if (type === 'URL') {
     valueInput.style.display = '';
     valueInput.placeholder = 'https://example.com/page — append {{1}} for a dynamic suffix';
   } else if (type === 'PHONE_NUMBER') {
     valueInput.style.display = '';
     valueInput.placeholder = '+919876543210';
+    if (urlExInput) urlExInput.style.display = 'none';
   }
+}
+
+function checkBtnUrlVar(input) {
+  const row = input.closest('.tpl-btn-row');
+  const urlExInput = row.querySelector('.tpl-btn-url-ex');
+  if (urlExInput) urlExInput.style.display = input.value.includes('{{1}}') ? '' : 'none';
 }
 
 function buildComponents() {
@@ -1732,7 +1742,10 @@ function buildComponents() {
         const url = row.querySelector('.tpl-btn-value').value.trim();
         if (!url) throw new Error('URL is required for URL buttons');
         btn.url = url;
-        if (url.includes('{{1}}')) btn.example = ['example-value'];
+        if (url.includes('{{1}}')) {
+          const exVal = row.querySelector('.tpl-btn-url-ex')?.value.trim() || 'example-value';
+          btn.example = [exVal];
+        }
       } else if (type === 'PHONE_NUMBER') {
         const phone = row.querySelector('.tpl-btn-value').value.trim();
         if (!phone) throw new Error('Phone number is required for Phone buttons');
