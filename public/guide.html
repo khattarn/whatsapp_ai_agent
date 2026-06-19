@@ -188,12 +188,17 @@
 
   <div class="sb-section">
     <div class="sb-section-label">Products &amp; Businesses</div>
-    <a class="sb-link" data-chapter="legalaid" href="#legalaid">
-      <span class="icon">⚖️</span> LawAid AI / Nyaya Saathi
-      <span class="coming">Coming soon</span>
+    <a class="sb-link" data-chapter="catalogue" href="#catalogue">
+      <span class="icon">🛍️</span> Product Catalogue
+    </a>
+    <a class="sb-link" data-chapter="ai" href="#ai">
+      <span class="icon">🤖</span> AI Automation
     </a>
     <a class="sb-link" data-chapter="garment" href="#garment">
       <span class="icon">👗</span> Garment Retail
+    </a>
+    <a class="sb-link" data-chapter="legalaid" href="#legalaid">
+      <span class="icon">⚖️</span> LawAid AI / Nyaya Saathi
       <span class="coming">Coming soon</span>
     </a>
   </div>
@@ -257,6 +262,16 @@
           <h3>Templates</h3>
           <p>Create and submit WhatsApp message templates for Meta approval.</p>
         </a>
+        <a class="feature-card" data-chapter="catalogue" href="#catalogue">
+          <div class="fc-icon">🛍️</div>
+          <h3>Catalogue</h3>
+          <p>Manage product inventory and share products directly in customer conversations.</p>
+        </a>
+        <a class="feature-card" data-chapter="ai" href="#ai">
+          <div class="fc-icon">🤖</div>
+          <h3>AI Automation</h3>
+          <p>Configure Claude auto-reply modes and system prompts per business.</p>
+        </a>
         <a class="feature-card" data-chapter="setup" href="#setup">
           <div class="fc-icon">⚙️</div>
           <h3>Settings</h3>
@@ -317,10 +332,13 @@
         <tbody>
           <tr><td><code>supabase-schema.sql</code></td><td>Core tables: businesses, contacts, conversations, messages, broadcasts, broadcast_recipients</td></tr>
           <tr><td><code>supabase-migration-v2.sql</code></td><td>Additional fields and indexes</td></tr>
-          <tr><td><code>supabase-migration-v3.sql</code></td><td>Session data + advocate tables</td></tr>
+          <tr><td><code>supabase-migration-v3.sql</code></td><td>Product catalogue table (<code>products</code>), auto-update trigger, <code>system_prompt</code> on businesses</td></tr>
           <tr><td><code>supabase-migration-v4.sql</code></td><td>WA message events</td></tr>
           <tr><td><code>supabase-migration-v5.sql</code></td><td>AI threshold + service mode fields</td></tr>
           <tr><td><code>supabase-migration-v6.sql</code></td><td>Assets storage bucket + template_notifications table</td></tr>
+          <tr><td><code>supabase-migration-v7.sql</code></td><td><code>system_prompt</code> and <code>ai_auto_threshold</code> columns on businesses (required for Settings tab AI form)</td></tr>
+          <tr><td><code>supabase-migration-v8.sql</code></td><td><code>error_message</code> column on broadcast_recipients</td></tr>
+          <tr><td><code>supabase-migration-v9.sql</code></td><td>Scheduled broadcasts: <code>scheduled_at</code>, <code>template_buttons</code> on broadcasts</td></tr>
         </tbody>
       </table>
 
@@ -627,18 +645,365 @@
     </div>
 
     <!-- ══════════════════════════════════════════ -->
-    <!-- CHAPTER: GARMENT (coming soon)            -->
+    <!-- CHAPTER: CATALOGUE                         -->
+    <!-- ══════════════════════════════════════════ -->
+    <div class="chapter" id="ch-catalogue">
+      <div class="chapter-hero">
+        <div class="ch-num">Chapter 7</div>
+        <h1>Product Catalogue</h1>
+        <p>Manage your product inventory and share products directly into customer conversations on WhatsApp.</p>
+      </div>
+
+      <h2 class="section-title">What is the Catalogue?</h2>
+      <p>The Catalogue is a two-part feature for retail businesses:</p>
+      <ul>
+        <li><strong>Catalogue tab</strong> — a full product management dashboard where you add, edit, and organise your inventory with images, prices, sizes, colours, and order links.</li>
+        <li><strong>In-chat product picker</strong> — a 🛍️ button inside the reply box that inserts a formatted product card into any customer conversation with one click.</li>
+      </ul>
+      <p>Products are stored in Supabase and include full retail details: name, category, SKU, price, sizes, colours, image URL, payment link, and description.</p>
+
+      <div class="tip"><strong>No WhatsApp Commerce account needed.</strong> The catalogue works independently of Meta's Commerce Manager — products are shared as formatted WhatsApp text messages with no approval process required.</div>
+
+      <h2 class="section-title">Prerequisite: Run the Migration</h2>
+      <p>The catalogue requires the <code>products</code> table in Supabase. If you haven't set it up:</p>
+      <ol>
+        <li>Open <strong>Supabase → SQL Editor</strong></li>
+        <li>Paste and run <code>supabase-migration-v3.sql</code> from the project root</li>
+        <li>You should see <em>"Success. No rows returned."</em></li>
+      </ol>
+      <div class="info">To check if the table already exists: open <strong>Supabase → Table Editor</strong> and look for a <code>products</code> table. If it's there, the migration has already been run.</div>
+
+      <h2 class="section-title">Opening the Catalogue Tab</h2>
+      <div class="steps">
+        <div class="step"><div class="step-num">1</div><div class="step-body"><h4>Click 🛍️ Catalogue in the top navigation</h4><p>It sits between Broadcasts and Templates.</p></div></div>
+        <div class="step"><div class="step-num">2</div><div class="step-body"><h4>Select your business</h4><p>Use the dropdown at the top-left. It defaults to Garment Retail if that business is configured.</p></div></div>
+        <div class="step"><div class="step-num">3</div><div class="step-body"><h4>Products load automatically</h4><p>All products for the selected business appear as image cards, sorted in-stock first, then by category and name.</p></div></div>
+      </div>
+
+      <h2 class="section-title">Adding a Product</h2>
+      <div class="steps">
+        <div class="step"><div class="step-num">1</div><div class="step-body"><h4>Click + Add Product</h4><p>The product form opens beside the grid.</p></div></div>
+        <div class="step"><div class="step-num">2</div><div class="step-body"><h4>Fill in the product details</h4><p>Only the product name is required. All other fields are optional but improve the in-chat message quality.</p></div></div>
+        <div class="step"><div class="step-num">3</div><div class="step-body"><h4>Click Save Product</h4><p>The product appears immediately in the grid and the form closes.</p></div></div>
+      </div>
+
+      <h3 class="sub-title">Product Field Reference</h3>
+      <table>
+        <thead><tr><th>Field</th><th>Required</th><th>Notes</th></tr></thead>
+        <tbody>
+          <tr><td>Product Name</td><td>Yes</td><td>Full name, e.g. <em>Cotton Anarkali Kurta</em></td></tr>
+          <tr><td>Category</td><td>No</td><td>Free-text. Keep names consistent so filters work well: e.g. <em>Kurta, Saree, Dupatta, Lehenga</em></td></tr>
+          <tr><td>SKU</td><td>No</td><td>Your internal product code, e.g. <em>KRT-001</em>. Shown in the shared message.</td></tr>
+          <tr><td>Price (₹)</td><td>No</td><td>Decimal value stored as INR. Shown as <em>₹1,299</em> in the shared message.</td></tr>
+          <tr><td>In Stock</td><td>No</td><td>Toggle on/off. Out-of-stock items show a badge in the grid. Mark as Out of Stock rather than deleting when temporarily unavailable.</td></tr>
+          <tr><td>Sizes</td><td>No</td><td>Comma-separated: <em>S, M, L, XL, XXL</em>. Shown in the shared message.</td></tr>
+          <tr><td>Colors</td><td>No</td><td>Comma-separated: <em>Red, Blue, Black</em>. Shown in the shared message.</td></tr>
+          <tr><td>Image URL</td><td>No</td><td>Public HTTPS URL to a product photo. Use the Assets Library to host images and get a permanent URL.</td></tr>
+          <tr><td>Payment / Order URL</td><td>No</td><td>Link to order page or payment form. Appears as <em>🛒 Order here: …</em> in the shared message — the most important field for self-serve ordering.</td></tr>
+          <tr><td>Description</td><td>No</td><td>Short description: fabric, fit, occasion. Shown in the shared message.</td></tr>
+        </tbody>
+      </table>
+
+      <h2 class="section-title">Editing a Product</h2>
+      <p>Click <strong>✏️ Edit</strong> on any product card. The form opens pre-filled with current values. Make changes and click <strong>Save Product</strong>. Changes apply immediately.</p>
+
+      <h2 class="section-title">Deleting a Product</h2>
+      <p>Click <strong>🗑 Delete</strong> on the product card and confirm. Deletion is permanent.</p>
+      <div class="warn"><strong>Prefer "Out of Stock" over deleting.</strong> Deleted products cannot be recovered. Mark items out of stock when temporarily unavailable; delete only when the product leaves your range permanently.</div>
+
+      <h2 class="section-title">Filtering &amp; Searching</h2>
+      <ul>
+        <li><strong>Search bar</strong> — matches product name, SKU, category, and description in real time as you type.</li>
+        <li><strong>Category filter</strong> — dropdown built from the categories in your catalogue. Select a category to show only those products.</li>
+        <li><strong>In-stock only toggle</strong> — hides out-of-stock items. Useful when checking availability during a customer conversation.</li>
+      </ul>
+      <p>All three filters work together. For example: show only in-stock <em>Kurta</em> items matching the search <em>"cotton"</em>.</p>
+
+      <h2 class="section-title">Sharing a Product in a Customer Chat</h2>
+      <p>The in-chat product picker lets you insert a formatted product message into the reply box without leaving the conversation.</p>
+      <div class="steps">
+        <div class="step"><div class="step-num">1</div><div class="step-body"><h4>Open a conversation in the Inbox</h4><p>Go to the 📥 Inbox tab and click any conversation.</p></div></div>
+        <div class="step"><div class="step-num">2</div><div class="step-body"><h4>Click the 🛍️ button in the reply box</h4><p>It sits to the right of the ✨ AI draft button. The product picker panel slides up above the reply area.</p></div></div>
+        <div class="step"><div class="step-num">3</div><div class="step-body"><h4>Search for a product</h4><p>Type in the search box to filter by name, SKU, or category. Only in-stock products for the current business are shown.</p></div></div>
+        <div class="step"><div class="step-num">4</div><div class="step-body"><h4>Click a product to insert it</h4><p>The picker closes and the reply box fills with a formatted product message.</p></div></div>
+        <div class="step"><div class="step-num">5</div><div class="step-body"><h4>Review and send</h4><p>Edit the message if needed — add a personal greeting or adjust wording — then click Send.</p></div></div>
+      </div>
+
+      <h3 class="sub-title">What the customer receives</h3>
+      <pre>🛍️ *Cotton Anarkali Kurta* (KRT-001)
+
+Lightweight cotton, comfortable for everyday wear.
+
+💰 *Price:* ₹1,299
+📏 *Sizes:* S, M, L, XL
+🎨 *Colors:* Red, Blue, Black
+✅ In Stock
+
+🛒 Order here: https://yourstore.com/pay/KRT-001</pre>
+      <p>Fields that are blank are omitted automatically — a product without a payment URL will not show the order link.</p>
+
+      <h2 class="section-title">Tips &amp; Best Practices</h2>
+      <ul>
+        <li><strong>Always add a payment URL.</strong> It is the most valuable field — customers can order without waiting for an agent.</li>
+        <li><strong>Use consistent category names.</strong> <em>Kurta</em> and <em>Kurtas</em> appear as two separate categories in the filter dropdown.</li>
+        <li><strong>Upload product images to the Assets Library first</strong>, then paste the URL. This ensures the link is permanent and publicly accessible.</li>
+        <li><strong>Fill in sizes and colours even for single-option products.</strong> Customers frequently ask before ordering — having it on the product card saves back-and-forth.</li>
+        <li><strong>Use SKUs for order tracking.</strong> Simple codes like <em>KRT-001</em> help agents and customers identify products precisely across messages.</li>
+      </ul>
+
+      <h2 class="section-title">Troubleshooting</h2>
+      <table>
+        <thead><tr><th>Problem</th><th>Solution</th></tr></thead>
+        <tbody>
+          <tr><td>Catalogue tab shows no products</td><td>Check the business selector — it must match the business whose products you added. Confirm the <code>products</code> table exists (run <code>supabase-migration-v3.sql</code>).</td></tr>
+          <tr><td>Save Product fails</td><td>Ensure the <code>products</code> table exists. Check that a business is selected — product name and businessId are both required.</td></tr>
+          <tr><td>Product image not showing in grid</td><td>The Image URL must be a direct public HTTPS link to the image file (not a webpage). Test in an incognito browser tab.</td></tr>
+          <tr><td>🛍️ button not visible in reply box</td><td>The button is to the right of ✨ Draft. The reply box may need to be scrolled or the pane may be narrow.</td></tr>
+          <tr><td>Picker shows no products</td><td>The picker only shows in-stock products for the current conversation's business. Mark products as In Stock in the Catalogue tab.</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- ══════════════════════════════════════════ -->
+    <!-- CHAPTER: AI AUTOMATION                     -->
+    <!-- ══════════════════════════════════════════ -->
+    <div class="chapter" id="ch-ai">
+      <div class="chapter-hero">
+        <div class="ch-num">Chapter 8</div>
+        <h1>AI Automation</h1>
+        <p>Configure how Claude handles incoming customer messages — fully automatic, FAQ-only, or human review for everything.</p>
+      </div>
+
+      <h2 class="section-title">Overview</h2>
+      <p>Each business can independently configure its AI auto-reply behaviour. There are three modes, changeable at any time from the Settings tab.</p>
+      <p>Regardless of mode, messages with complaint, refund, fraud, or cancellation intent are <strong>always routed to a human agent</strong>. The AI never handles these automatically.</p>
+
+      <h2 class="section-title">Accessing AI Settings</h2>
+      <div class="steps">
+        <div class="step"><div class="step-num">1</div><div class="step-body"><h4>Open the ⚙️ Settings tab</h4><p>Click Settings in the top navigation.</p></div></div>
+        <div class="step"><div class="step-num">2</div><div class="step-body"><h4>Find the business card</h4><p>Each business has its own card with the business name in the header.</p></div></div>
+        <div class="step"><div class="step-num">3</div><div class="step-body"><h4>Set the AI Auto-Reply Mode</h4><p>Choose from the dropdown: <strong>All messages</strong>, <strong>Simple / FAQ only</strong>, or <strong>Off — queue everything</strong>.</p></div></div>
+        <div class="step"><div class="step-num">4</div><div class="step-body"><h4>Write the System Prompt</h4><p>The text box below the mode dropdown holds Claude's personality instructions for this business. See the guide below.</p></div></div>
+        <div class="step"><div class="step-num">5</div><div class="step-body"><h4>Click 💾 Save</h4><p>The Save button is in the top-right of the business card. Changes take effect for new incoming messages immediately.</p></div></div>
+      </div>
+
+      <div class="info"><strong>If the Settings form is empty or the Save button is missing:</strong> run <code>supabase-migration-v7.sql</code> in Supabase SQL Editor. This adds the <code>system_prompt</code> and <code>ai_auto_threshold</code> columns to the businesses table.</div>
+
+      <h2 class="section-title">The Three Modes</h2>
+      <table>
+        <thead><tr><th>Mode</th><th>Value</th><th>Behaviour</th><th>Best for</th></tr></thead>
+        <tbody>
+          <tr>
+            <td>All messages</td>
+            <td><code>all</code></td>
+            <td>Claude auto-sends a reply to every non-complex incoming message. No agent review for routine queries.</td>
+            <td>High-volume accounts where FAQ queries dominate and speed matters most.</td>
+          </tr>
+          <tr>
+            <td>Simple / FAQ only</td>
+            <td><code>simple</code></td>
+            <td>Claude auto-replies to pattern-matched simple queries (greetings, location, hours, price, availability). Ambiguous messages generate a Claude draft queued for agent review.</td>
+            <td>Garment Retail — recommended default. Fast FAQ answers with human oversight for nuanced queries.</td>
+          </tr>
+          <tr>
+            <td>Off — queue everything</td>
+            <td><code>none</code></td>
+            <td>Claude generates a suggested draft for every message but never auto-sends. Agents approve or edit every response.</td>
+            <td>Initial setup (verify quality before going live), sensitive businesses, or when full human control is needed.</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h2 class="section-title">How Routing Works</h2>
+      <p>When a customer message arrives, the webhook processes it in this order:</p>
+      <div class="steps">
+        <div class="step"><div class="step-num">1</div><div class="step-body">
+          <h4>Complex query check (all modes)</h4>
+          <p>The message is scanned for signals indicating a sensitive issue:</p>
+          <ul>
+            <li>Complaints, disputes, poor quality</li>
+            <li>Refund, return, or exchange requests</li>
+            <li>Fraud, scam, or unauthorised charge</li>
+            <li>Cancellation requests</li>
+          </ul>
+          <p>If matched → <strong>always escalate to human</strong>, regardless of mode. A holding message is sent to the customer and the conversation is flagged <em>Needs Human</em>.</p>
+        </div></div>
+        <div class="step"><div class="step-num">2</div><div class="step-body">
+          <h4>Mode check</h4>
+          <p>If not complex, check the business mode:</p>
+          <ul>
+            <li><strong>none</strong> → generate Claude draft, queue as suggestion. Done.</li>
+            <li><strong>all</strong> → generate Claude reply and auto-send. Done.</li>
+            <li><strong>simple</strong> → continue to step 3.</li>
+          </ul>
+        </div></div>
+        <div class="step"><div class="step-num">3</div><div class="step-body">
+          <h4>Simple pattern check (simple mode only)</h4>
+          <p>The message is matched against simple FAQ patterns:</p>
+          <ul>
+            <li>Greetings (hi, hello, namaste, good morning, etc.)</li>
+            <li>Store location, address, directions</li>
+            <li>Business hours, open/closed queries</li>
+            <li>Price, cost, rate enquiries</li>
+            <li>Product availability, in-stock queries</li>
+            <li>Catalogue and "what do you sell" questions</li>
+          </ul>
+          <p>Matched → Claude auto-sends the reply. Not matched → Claude draft is queued for agent review.</p>
+        </div></div>
+      </div>
+
+      <h2 class="section-title">Writing the System Prompt</h2>
+      <p>The system prompt tells Claude who it is, what the business does, and how to respond. A detailed, accurate prompt leads to confident, on-brand replies.</p>
+
+      <h3 class="sub-title">What to include</h3>
+      <ul>
+        <li><strong>Business name and brief description</strong></li>
+        <li><strong>Physical address with a landmark</strong> — Claude can answer location queries if the address is in the prompt</li>
+        <li><strong>Opening hours</strong></li>
+        <li><strong>Key product categories</strong> — so Claude can describe what you sell</li>
+        <li><strong>Price range</strong> — e.g. "prices range from ₹500 to ₹5,000"</li>
+        <li><strong>Return / exchange policy</strong></li>
+        <li><strong>Tone and language preferences</strong> — formal, casual, bilingual (Hindi + English), etc.</li>
+        <li><strong>What Claude should NOT do</strong> — e.g. "do not quote exact delivery dates, do not promise specific discounts"</li>
+      </ul>
+
+      <h3 class="sub-title">Example — Garment Retail system prompt</h3>
+      <pre>You are a helpful customer service assistant for [Shop Name], a traditional Indian garment store in [City].
+
+Location: [Full address with landmark]
+Hours: Monday–Saturday 10 AM – 8 PM | Sunday 11 AM – 6 PM
+
+We specialise in women's ethnic wear: Kurtas, Sarees, Dupattas, Lehengas, and Anarkalis.
+Fabrics: cotton, chiffon, georgette, silk. Price range: ₹500–₹8,000.
+
+Return policy: Unused items with tags can be exchanged within 7 days. No cash refunds — store credit only.
+
+Respond warmly and concisely. If the customer writes in Hindi, reply in Hindi.
+Do not promise specific delivery timelines or quote exact prices — direct customers to the payment link or an agent for order specifics.
+If a customer has a complaint or refund request, acknowledge their concern and let them know a team member will follow up shortly.</pre>
+
+      <h2 class="section-title">What Agents See in the Inbox</h2>
+      <table>
+        <thead><tr><th>Sender type</th><th>Displayed as</th><th>Meaning</th></tr></thead>
+        <tbody>
+          <tr><td><code>ai</code></td><td>💬 AI label on message bubble</td><td>Claude auto-sent this reply — customer already received it</td></tr>
+          <tr><td><code>ai_suggestion</code></td><td>Suggestion banner in the reply box</td><td>Claude drafted a reply but it's pending agent review. Agent can edit and send, or discard.</td></tr>
+          <tr><td><code>agent</code></td><td>✅ Sent label</td><td>Human agent sent this reply manually</td></tr>
+          <tr><td><code>customer</code></td><td>Incoming message bubble</td><td>Received from the customer</td></tr>
+        </tbody>
+      </table>
+
+      <h2 class="section-title">Per-Conversation AI Toggle</h2>
+      <p>Agents can toggle AI on or off for individual conversations from the Inbox — useful when a specific customer needs full human attention regardless of the global business mode.</p>
+
+      <h2 class="section-title">Tips for Garment Retail</h2>
+      <ul>
+        <li><strong>Start with Simple mode.</strong> Let Claude handle greetings and location/hours automatically while you verify the system prompt quality on live queries.</li>
+        <li><strong>Include your product categories in the prompt.</strong> Customers frequently ask "what do you sell?" — Claude can answer confidently if the prompt lists your range.</li>
+        <li><strong>Include the full address with a nearby landmark.</strong> Location queries are the most common for walk-in retail stores.</li>
+        <li><strong>Review AI drafts regularly.</strong> In Simple mode, drafts appear for ambiguous messages. Patterns in these drafts tell you what's missing from your system prompt.</li>
+        <li><strong>Don't hard-code exact prices.</strong> They change. Use "prices range from ₹X to ₹Y" and let agents share specific prices via the product catalogue picker.</li>
+      </ul>
+
+      <h2 class="section-title">Troubleshooting</h2>
+      <table>
+        <thead><tr><th>Problem</th><th>Solution</th></tr></thead>
+        <tbody>
+          <tr><td>Settings tab shows empty form / no Save button</td><td>Run <code>supabase-migration-v7.sql</code> in Supabase SQL Editor to add the <code>system_prompt</code> and <code>ai_auto_threshold</code> columns.</td></tr>
+          <tr><td>Save button clicks but nothing saves</td><td>Open browser DevTools → Network tab → look for a failed <code>update-business</code> request. Check Netlify function logs for the error.</td></tr>
+          <tr><td>Claude not auto-replying despite 'all' mode</td><td>Verify <code>ANTHROPIC_API_KEY</code> is set in Netlify environment variables. Check Netlify function logs for the webhook function errors.</td></tr>
+          <tr><td>Claude ignores the system prompt</td><td>Confirm the prompt was saved — refresh the Settings tab and verify the text is still there. Check for a mismatch between the business ID in state and the row in Supabase.</td></tr>
+          <tr><td>Complex query not escalating to human</td><td>The complex-pattern detection is keyword-based. Unusual phrasing may slip through. Agents can always manually toggle AI off for a conversation.</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- ══════════════════════════════════════════ -->
+    <!-- CHAPTER: GARMENT RETAIL                    -->
     <!-- ══════════════════════════════════════════ -->
     <div class="chapter" id="ch-garment">
       <div class="chapter-hero">
-        <div class="ch-num">Coming Soon</div>
+        <div class="ch-num">Chapter 9</div>
         <h1>Garment Retail</h1>
-        <p>Hybrid AI + human mode, FAQ routing, product catalogue, and order management.</p>
+        <p>Hybrid AI + human customer service — from FAQ auto-replies to product sharing and order routing.</p>
       </div>
-      <div class="coming-soon">
-        <div class="cs-icon">👗</div>
-        <h2>Guide coming soon</h2>
-        <p>This chapter will cover AI threshold configuration, system prompt customisation, and the garment retail customer service workflow.</p>
+
+      <h2 class="section-title">Business Overview</h2>
+      <p>The Garment Retail WhatsApp account runs in <strong>hybrid mode</strong> — Claude handles repetitive FAQ queries automatically while agents manage complex conversations, order issues, and relationship-building interactions.</p>
+      <p>The two primary tools for Garment Retail are:</p>
+      <ul>
+        <li><strong>AI Automation</strong> — Claude auto-replies to greetings, location, hours, and availability queries. Complex queries (refunds, complaints) always route to a human.</li>
+        <li><strong>Product Catalogue</strong> — Agents share formatted product cards directly into any conversation with a single click.</li>
+      </ul>
+
+      <h2 class="section-title">Recommended Setup Checklist</h2>
+      <div class="card">
+        <p><strong>1. Run database migrations</strong> (Supabase → SQL Editor)</p>
+        <ul>
+          <li><code>supabase-migration-v3.sql</code> — creates the <code>products</code> table</li>
+          <li><code>supabase-migration-v7.sql</code> — adds AI settings columns to businesses</li>
+        </ul>
+        <p style="margin-top:12px"><strong>2. Configure AI (Settings tab)</strong></p>
+        <ul>
+          <li>AI Auto-Reply Mode: <strong>Simple / FAQ only</strong></li>
+          <li>System Prompt: include store name, address with landmark, hours, product categories, price range, return policy, and tone</li>
+        </ul>
+        <p style="margin-top:12px"><strong>3. Add products (Catalogue tab)</strong></p>
+        <ul>
+          <li>Add each product with name, category, SKU, price, sizes, colours, and payment URL</li>
+          <li>Upload product images to the Assets Library, then paste URLs into the Image URL field</li>
+          <li>Keep stock status current — mark items Out of Stock when they sell out</li>
+        </ul>
+      </div>
+
+      <h2 class="section-title">Typical Customer Service Workflow</h2>
+      <table>
+        <thead><tr><th>Customer message</th><th>What happens automatically</th><th>Agent action needed</th></tr></thead>
+        <tbody>
+          <tr><td>Hi / Hello / Namaste</td><td>Claude auto-replies with a greeting and store overview</td><td>None</td></tr>
+          <tr><td>Where are you located?</td><td>Claude sends the address from the system prompt</td><td>None</td></tr>
+          <tr><td>What are your timings?</td><td>Claude sends opening hours</td><td>None</td></tr>
+          <tr><td>Do you have cotton kurtas in stock?</td><td>Claude confirms from context; draft queued if ambiguous</td><td>Review draft → share specific products via 🛍️ picker</td></tr>
+          <tr><td>How much does a silk saree cost?</td><td>Claude gives price range from system prompt</td><td>Use 🛍️ picker to share exact product with price and order link</td></tr>
+          <tr><td>I want to return this / I want a refund</td><td>Flagged as complex → holding message sent → <em>Needs Human</em> flag set</td><td>Pick up conversation, handle return per store policy</td></tr>
+          <tr><td>This is fake / scam / fraud</td><td>Flagged as complex → immediately escalated</td><td>Respond urgently and personally</td></tr>
+        </tbody>
+      </table>
+
+      <h2 class="section-title">Sharing a Product in a Chat</h2>
+      <p>When a customer asks about a specific product or you want to proactively show what's available:</p>
+      <ol>
+        <li>In the conversation reply box, click the <strong>🛍️ button</strong> (next to ✨ Draft)</li>
+        <li>Search or scroll to the product in the picker panel</li>
+        <li>Click the product — the reply box fills with a formatted message including name, SKU, price, sizes, colours, stock status, and order link</li>
+        <li>Add a personal note if needed, then Send</li>
+      </ol>
+
+      <h2 class="section-title">Daily Agent Checklist</h2>
+      <ul>
+        <li>✅ Check the inbox for conversations marked <em>Needs Human</em> — complex queries and AI suggestions waiting for review</li>
+        <li>✅ Review AI draft suggestions — approve, edit, or discard</li>
+        <li>✅ Update stock status in the Catalogue when items sell out or restock</li>
+        <li>✅ Update the system prompt whenever hours, location, or your product range changes</li>
+      </ul>
+
+      <h2 class="section-title">More Detail</h2>
+      <div class="feature-grid">
+        <a class="feature-card" data-chapter="catalogue" href="#catalogue">
+          <div class="fc-icon">🛍️</div>
+          <h3>Product Catalogue</h3>
+          <p>Full guide: adding products, editing, filtering, and the in-chat sharing picker.</p>
+        </a>
+        <a class="feature-card" data-chapter="ai" href="#ai">
+          <div class="fc-icon">🤖</div>
+          <h3>AI Automation</h3>
+          <p>Full guide: three modes, routing logic, system prompt writing, and troubleshooting.</p>
+        </a>
+        <a class="feature-card" data-chapter="templates" href="#templates">
+          <div class="fc-icon">📋</div>
+          <h3>Templates</h3>
+          <p>Create broadcast templates for sale announcements, festive offers, and promotions.</p>
+        </a>
       </div>
     </div>
 
