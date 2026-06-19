@@ -10,6 +10,10 @@
 [functions.'send-batch-background']
   schedule = "30 4 * * *"
 
+# Scheduled WhatsApp broadcasts — check every 5 minutes
+[functions.'scheduled-broadcast-background']
+  schedule = "*/5 * * * *"
+
 [[redirects]]
   from = "/api/*"
   to = "/.netlify/functions/:splat"

@@ -195,6 +195,26 @@ exports.handler = async (event) => {
     return { statusCode: 200, headers, body: JSON.stringify({ broadcasts: data || [] }) };
   }
 
+  // ── PATCH: cancel a scheduled broadcast ───────────────────────────────
+  if (event.httpMethod === 'PATCH') {
+    try {
+      const { broadcastId, action } = JSON.parse(event.body || '{}');
+      if (!broadcastId || action !== 'cancel') {
+        return { statusCode: 400, headers, body: JSON.stringify({ error: 'broadcastId and action=cancel required' }) };
+      }
+      const { data, error } = await supabase.from('broadcasts')
+        .update({ status: 'cancelled' })
+        .eq('id', broadcastId)
+        .eq('status', 'scheduled')
+        .select('id');
+      if (error) return { statusCode: 500, headers, body: JSON.stringify({ error: error.message }) };
+      if (!data?.length) return { statusCode: 409, headers, body: JSON.stringify({ error: 'Broadcast not found or already past scheduled status' }) };
+      return { statusCode: 200, headers, body: JSON.stringify({ success: true }) };
+    } catch (err) {
+      return { statusCode: 500, headers, body: JSON.stringify({ error: err.message }) };
+    }
+  }
+
   // ── POST: create and send broadcast ───────────────────────────────────
   if (event.httpMethod === 'POST') {
     try {
@@ -213,6 +233,7 @@ exports.handler = async (event) => {
         mediaCaption,
         contactIds,
         tags,
+        scheduledAt,
       } = body;
 
       // Validation
@@ -251,6 +272,13 @@ exports.handler = async (event) => {
       const campaign = { messageType, message, templateName, templateLanguage, templateVariables, templateButtons, mediaUrl, mediaType, mediaCaption };
       const displayMsg = displaySummary(campaign);
 
+      // Validate scheduled time is in the future
+      if (scheduledAt && new Date(scheduledAt) <= new Date()) {
+        return { statusCode: 400, headers, body: JSON.stringify({ error: 'Scheduled time must be in the future' }) };
+      }
+
+      const isScheduled = !!scheduledAt;
+
       // Create broadcast record
       const { data: broadcast } = await supabase
         .from('broadcasts')
@@ -262,12 +290,14 @@ exports.handler = async (event) => {
           template_name: templateName || null,
           template_language: templateLanguage || 'en',
           template_variables: templateVariables.length ? templateVariables : null,
+          template_buttons: templateButtons.length ? templateButtons : null,
           media_url: mediaUrl || null,
           media_type: mediaType !== 'none' ? mediaType : null,
           media_caption: mediaCaption || null,
           recipient_count: contacts.length,
-          status: 'sending',
-          sent_at: new Date().toISOString(),
+          status: isScheduled ? 'scheduled' : 'sending',
+          scheduled_at: isScheduled ? scheduledAt : null,
+          sent_at: isScheduled ? null : new Date().toISOString(),
         })
         .select()
         .single();
@@ -277,8 +307,16 @@ exports.handler = async (event) => {
         contacts.map(c => ({ broadcast_id: broadcast.id, contact_id: c.id, status: 'pending' }))
       );
 
-      // Return immediately — frontend sends in batches via /api/broadcast-send
-      // to avoid Netlify's 10-second function timeout on large contact lists.
+      // Scheduled: cron will handle the send — return early
+      if (isScheduled) {
+        return {
+          statusCode: 200,
+          headers,
+          body: JSON.stringify({ success: true, scheduled: true, broadcastId: broadcast.id, scheduledAt, total: contacts.length }),
+        };
+      }
+
+      // Send now: return contacts for client-side batching via /api/broadcast-send
       return {
         statusCode: 200,
         headers,
