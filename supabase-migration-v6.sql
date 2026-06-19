@@ -15,9 +15,14 @@ VALUES (
 ON CONFLICT (id) DO NOTHING;
 
 -- Allow service role full access to assets bucket
-CREATE POLICY IF NOT EXISTS "Service role full access on assets"
-  ON storage.objects FOR ALL
-  USING (bucket_id = 'assets');
+DO $$
+BEGIN
+  CREATE POLICY "Service role full access on assets"
+    ON storage.objects FOR ALL
+    USING (bucket_id = 'assets');
+EXCEPTION WHEN duplicate_object THEN
+  NULL;
+END $$;
 
 -- ================================================
 -- Template status notifications
