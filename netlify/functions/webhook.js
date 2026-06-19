@@ -63,6 +63,22 @@ const COMPLEX_PATTERNS = [
   /\b(fraud|scam|cheated|deceived)\b/i,
 ];
 
+// Patterns that indicate an automated out-of-office / bot response — never reply to these
+const AUTO_REPLY_PATTERNS = [
+  /\b(auto[\s-]?reply|automated (response|reply|message)|automatic reply)\b/i,
+  /\bthank you for (contacting|reaching out to)\b/i,
+  /\b(out of (office|town)|away from (the )?office|on leave|on vacation)\b/i,
+  /\bi('m| am) (currently )?(away|unavailable|not (available|in the office))\b/i,
+  /\bwill (get|be getting) back to you\b/i,
+  /\bdo not (reply|respond) (to )?this (email|message)\b/i,
+  /\bthis is an? (automated|auto|system)( generated)?( message| response| reply)?\b/i,
+];
+
+function isAutoReply(text) {
+  if (!text) return false;
+  return AUTO_REPLY_PATTERNS.some(p => p.test(text));
+}
+
 function needsHuman(text) {
   if (!text) return false;
   return COMPLEX_PATTERNS.some(p => p.test(text));
@@ -567,6 +583,12 @@ exports.handler = async (event) => {
           .update({ do_not_contact: false })
           .eq('phone_e164', '+' + fromPhone);
         await supabase.from('conversations').update({ status: 'open' }).eq('id', conversation.id);
+        return { statusCode: 200, body: 'OK' };
+      }
+
+      // ── Ignore automated out-of-office / bot responses ───────────────
+      if (text && isAutoReply(text)) {
+        console.log('[webhook] auto-reply detected — skipping AI routing:', fromPhone);
         return { statusCode: 200, body: 'OK' };
       }
 
