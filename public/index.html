@@ -922,7 +922,13 @@ async function api(path, opts = {}) {
     headers: { 'Content-Type': 'application/json', ...opts.headers },
     ...opts,
   });
-  return res.json();
+  const text = await res.text();
+  try {
+    return JSON.parse(text);
+  } catch {
+    // Server returned non-JSON (e.g. Netlify 404 HTML or timeout page)
+    throw new Error(`Server error ${res.status} on ${path}` + (text.length < 200 ? `: ${text}` : ''));
+  }
 }
 
 // ── Businesses ─────────────────────────────────────────────────────────────
