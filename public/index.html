@@ -538,12 +538,13 @@
           Use <strong>Meta-approved templates</strong> — these work outside the 24-hour window and are ideal for campaigns to existing customers. Create templates at Meta Business Manager → WhatsApp Manager → Message Templates.
         </div>
         <div class="form-row">
-          <label>Template Name <span style="font-weight:400;color:var(--muted)">(exact name from Meta, e.g. <code>hello_world</code>)</span></label>
-          <input type="text" id="bc-template-name" placeholder="e.g. summer_sale_2026" />
-        </div>
-        <div class="form-row">
-          <label>Language Code</label>
-          <input type="text" id="bc-template-lang" value="en" placeholder="en" style="max-width:120px" />
+          <label>Template</label>
+          <select id="bc-template-select" style="width:100%">
+            <option value="">— select a business first —</option>
+          </select>
+          <!-- hidden inputs kept for backward-compat with existing JS reads -->
+          <input type="hidden" id="bc-template-name" />
+          <input type="hidden" id="bc-template-lang" value="en" />
         </div>
         <div class="form-row">
           <label>Body Variables <span style="font-weight:400;color:var(--muted)">— maps to {{1}}, {{2}}, … in your template. Use {name} or {first_name} for personalisation.</span></label>
@@ -1394,6 +1395,7 @@ function updateBroadcastFields() {
 
   document.getElementById('bc-text-fields').style.display = isText ? 'block' : 'none';
   document.getElementById('bc-template-fields').style.display = isTpl ? 'block' : 'none';
+  if (isTpl) loadBroadcastTemplates();
   document.getElementById('bc-media-fields').style.display = (isTpl || isImg || isVid) ? 'block' : 'none';
   document.getElementById('bc-media-type-row').style.display = isTpl ? 'block' : 'none';
   document.getElementById('bc-caption-row').style.display = (isImg || isVid) ? 'block' : 'none';
@@ -1463,6 +1465,12 @@ function renumberBtns() {
   });
 }
 function collectButtons() {
+  // Auto-generated rows from template selection use .bc-btn-val
+  const autoBtns = [...document.querySelectorAll('#bc-btns-list .bc-btn-val')]
+    .map(inp => ({ index: parseInt(inp.dataset.index), sub_type: inp.dataset.subType, value: inp.value.trim() }))
+    .filter(b => b.value);
+  if (autoBtns.length) return autoBtns;
+  // Manual rows (+ Add Button Parameter) use .btn-row with a <select>
   return [...document.querySelectorAll('#bc-btns-list .btn-row')].map(row => ({
     index: parseInt(row.dataset.index),
     sub_type: row.querySelector('select').value,
@@ -1503,6 +1511,72 @@ document.getElementById('bc-recipients').addEventListener('change', function() {
 document.getElementById('bc-biz-select').addEventListener('change', () => {
   document.getElementById('bc-hist-biz-select').value = document.getElementById('bc-biz-select').value;
   loadBroadcastHistory();
+  loadBroadcastTemplates();
+});
+
+// Populate bc-template-select with APPROVED templates for the selected business
+async function loadBroadcastTemplates() {
+  const bizId = document.getElementById('bc-biz-select').value;
+  const sel = document.getElementById('bc-template-select');
+  if (!bizId) { sel.innerHTML = '<option value="">— select a business first —</option>'; return; }
+  sel.innerHTML = '<option value="">Loading…</option>';
+  try {
+    const data = await api(`templates?businessId=${bizId}&status=APPROVED`);
+    const tpls = (data.templates || []).filter(t => t.status === 'APPROVED');
+    if (!tpls.length) {
+      sel.innerHTML = '<option value="">No approved templates found</option>';
+      return;
+    }
+    sel.innerHTML = '<option value="">— choose template —</option>' +
+      tpls.map(t => `<option value="${escHtml(t.name)}" data-lang="${escHtml(t.language)}" data-components='${escHtml(JSON.stringify(t.components || []))}'>${escHtml(t.name)} (${escHtml(t.language)})</option>`).join('');
+  } catch (e) {
+    sel.innerHTML = '<option value="">Error loading templates</option>';
+  }
+}
+
+document.getElementById('bc-template-select').addEventListener('change', function() {
+  const opt = this.options[this.selectedIndex];
+  const name = opt.value;
+  document.getElementById('bc-template-name').value = name;
+  document.getElementById('bc-template-lang').value = opt.dataset.lang || 'en';
+  updatePreview();
+  if (!name) return;
+
+  // Auto-detect variable count from template body
+  let components = [];
+  try { components = JSON.parse(opt.dataset.components || '[]'); } catch { return; }
+  const body = components.find(c => c.type === 'BODY');
+  const bodyText = body?.text || '';
+  const varCount = (bodyText.match(/\{\{\d+\}\}/g) || []).length;
+
+  // Auto-detect dynamic buttons
+  const btnComp = components.find(c => c.type === 'BUTTONS');
+  const dynBtns = (btnComp?.buttons || []).filter(b =>
+    (b.type === 'URL' && b.url?.includes('{{1}}')) ||
+    b.type === 'QUICK_REPLY' || b.type === 'COPY_CODE' || b.type === 'FLOW'
+  );
+
+  // Rebuild vars list
+  const varList = document.getElementById('bc-vars-list');
+  varList.innerHTML = '';
+  for (let i = 1; i <= varCount; i++) {
+    const row = document.createElement('div');
+    row.style.cssText = 'display:flex;gap:6px;margin-bottom:6px;align-items:center';
+    row.innerHTML = `<span style="font-size:12px;color:var(--muted);min-width:28px">{{${i}}}</span><input type="text" placeholder="value for {{${i}}}" style="flex:1" oninput="updatePreview()" />`;
+    varList.appendChild(row);
+  }
+
+  // Rebuild buttons list
+  const btnList = document.getElementById('bc-btns-list');
+  btnList.innerHTML = '';
+  dynBtns.forEach((b, idx) => {
+    const row = document.createElement('div');
+    row.style.cssText = 'display:flex;gap:6px;margin-bottom:6px;align-items:center;flex-wrap:wrap';
+    const subType = b.type === 'URL' ? 'url' : b.type === 'QUICK_REPLY' ? 'quick_reply' : b.type === 'COPY_CODE' ? 'copy_code' : 'flow';
+    const label = b.type === 'URL' ? `🔗 URL suffix (btn ${idx})` : b.type === 'QUICK_REPLY' ? `💬 Quick reply (btn ${idx})` : b.type === 'COPY_CODE' ? `🏷️ Coupon code (btn ${idx})` : `🔄 Flow token (btn ${idx})`;
+    row.innerHTML = `<span style="font-size:12px;color:var(--muted);min-width:140px">${label}</span><input type="text" class="bc-btn-val" data-index="${idx}" data-sub-type="${subType}" placeholder="value" style="flex:1" />`;
+    btnList.appendChild(row);
+  });
 });
 document.getElementById('bc-hist-biz-select').addEventListener('change', loadBroadcastHistory);
 
@@ -1526,7 +1600,7 @@ document.getElementById('bc-send-btn').addEventListener('click', async () => {
     payload.templateButtons = collectButtons();
     payload.mediaUrl = document.getElementById('bc-media-url').value.trim();
     payload.mediaType = payload.mediaUrl ? document.getElementById('bc-media-type').value : 'none';
-    if (!payload.templateName) { toast('Please enter the template name'); return; }
+    if (!payload.templateName) { toast('Please select a template'); return; }
   } else if (currentMsgType === 'image' || currentMsgType === 'video') {
     payload.mediaUrl = document.getElementById('bc-media-url').value.trim();
     payload.mediaCaption = document.getElementById('bc-media-caption').value.trim();
@@ -1586,6 +1660,7 @@ document.getElementById('bc-send-btn').addEventListener('click', async () => {
     document.getElementById('bc-name').value = '';
     document.getElementById('bc-message').value = '';
     document.getElementById('bc-template-name').value = '';
+    document.getElementById('bc-template-select').value = '';
     document.getElementById('bc-media-url').value = '';
     document.getElementById('bc-media-caption').value = '';
     document.getElementById('bc-vars-list').innerHTML = '';
