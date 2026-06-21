@@ -56,13 +56,14 @@ exports.handler = async (event) => {
 
       let query = supabase
         .from('conversations')
-        .select('*, contacts(id, name, phone), businesses(id, name, color)')
+        .select('*, contacts(id, name, phone, channel_user_id), businesses(id, name, color)')
         .eq('business_id', businessId)
         .order('last_message_at', { ascending: false })
         .limit(100);
 
       if (q.status) query = query.eq('status', q.status);
       if (q.needsHuman === 'true') query = query.eq('needs_human', true);
+      if (q.channel) query = query.eq('channel', q.channel);
 
       const { data: convs } = await query;
 

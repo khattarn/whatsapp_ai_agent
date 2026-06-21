@@ -113,6 +113,44 @@ async function sendWhatsAppMessage(accessToken, phoneNumberId, toPhone, text) {
   return data;
 }
 
+// ── Send an Instagram DM via the Graph API ─────────────────────────────────
+async function sendInstagramMessage(accessToken, recipientId, text) {
+  const res = await fetch(
+    'https://graph.facebook.com/v19.0/me/messages',
+    {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${accessToken}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        recipient: { id: recipientId },
+        message: { text },
+      }),
+    }
+  );
+  return res.json();
+}
+
+// ── Send a Facebook Messenger message via the Graph API ────────────────────
+async function sendFacebookMessage(pageToken, recipientId, text) {
+  const res = await fetch(
+    'https://graph.facebook.com/v19.0/me/messages',
+    {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${pageToken}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        recipient: { id: recipientId },
+        message: { text },
+      }),
+    }
+  );
+  return res.json();
+}
+
 // ── Resolve advocate name from the advocates table by phone ───────────────
 async function resolveAdvocateName(phone) {
   const { data: adv } = await supabase
@@ -124,45 +162,60 @@ async function resolveAdvocateName(phone) {
 }
 
 // ── Find or create contact ─────────────────────────────────────────────────
-async function upsertContact(phone, businessId) {
-  const { data: existing } = await supabase
-    .from('contacts')
-    .select('*')
-    .eq('phone', phone)
-    .eq('business_id', businessId)
-    .single();
+// opts: { phone?, channelUserId?, name? }
+// WhatsApp contacts are keyed by phone; Instagram/Facebook by channelUserId.
+async function upsertContact({ phone, channelUserId, name: displayName }, businessId) {
+  let query = supabase.from('contacts').select('*').eq('business_id', businessId);
+
+  if (channelUserId) {
+    query = query.eq('channel_user_id', channelUserId);
+  } else {
+    query = query.eq('phone', phone);
+  }
+
+  const { data: existing } = await query.single();
 
   if (existing) {
     const updatePayload = { last_seen: new Date().toISOString() };
+    if (phone && !existing.phone) updatePayload.phone = phone;
     // Self-heal: if name is still the raw phone number, resolve from advocates
-    if (existing.name === phone) {
+    if (phone && existing.name === phone) {
       const advName = await resolveAdvocateName(phone);
-      if (advName) {
-        updatePayload.name = advName;
-        existing.name = advName;
-      }
+      if (advName) { updatePayload.name = advName; existing.name = advName; }
     }
     await supabase.from('contacts').update(updatePayload).eq('id', existing.id);
     return existing;
   }
 
-  // New contact — look up advocate name before falling back to phone
-  const advName = await resolveAdvocateName(phone);
+  // New contact — look up advocate name for WA contacts
+  let name = displayName || phone || channelUserId || 'Unknown';
+  if (phone) {
+    const advName = await resolveAdvocateName(phone);
+    if (advName) name = advName;
+  }
+
   const { data: created } = await supabase
     .from('contacts')
-    .insert({ phone, name: advName || phone, business_id: businessId, last_seen: new Date().toISOString() })
+    .insert({
+      phone: phone || null,
+      channel_user_id: channelUserId || null,
+      name,
+      business_id: businessId,
+      last_seen: new Date().toISOString(),
+    })
     .select()
     .single();
   return created;
 }
 
 // ── Find or create open conversation ──────────────────────────────────────
-async function upsertConversation(contactId, businessId) {
+async function upsertConversation(contactId, businessId, channel = 'whatsapp') {
   const { data: existing } = await supabase
     .from('conversations')
     .select('*')
     .eq('contact_id', contactId)
     .eq('business_id', businessId)
+    .eq('channel', channel)
     .eq('status', 'open')
     .order('created_at', { ascending: false })
     .limit(1)
@@ -172,7 +225,7 @@ async function upsertConversation(contactId, businessId) {
 
   const { data: created } = await supabase
     .from('conversations')
-    .insert({ contact_id: contactId, business_id: businessId, status: 'open', ai_enabled: true })
+    .insert({ contact_id: contactId, business_id: businessId, channel, status: 'open', ai_enabled: true })
     .select()
     .single();
   return created;
@@ -431,6 +484,158 @@ async function handleLegalAid(business, _contact, conversation, text, fromPhone,
   await reply(languagePrompt());
 }
 
+// ── Instagram / Facebook Messenger handler ────────────────────────────────
+// Called when body.object === 'instagram' or 'page'.
+// Both channels share the same Messenger Platform event structure.
+async function handleSocialChannel(body) {
+  const channel = body.object === 'instagram' ? 'instagram' : 'facebook';
+  console.log(`[webhook/${channel}] received — entries:`, body.entry?.length);
+
+  for (const entry of (body.entry || [])) {
+    const pageId = entry.id;
+    console.log(`[webhook/${channel}] entry id (pageId):`, pageId, '| messaging events:', entry.messaging?.length ?? 0);
+
+    for (const messaging of (entry.messaging || [])) {
+      // Skip delivery/read receipts — they have no .message
+      if (!messaging.message) { console.log(`[webhook/${channel}] skipping non-message event`); continue; }
+      // Skip echo (messages sent by the page itself)
+      if (messaging.message.is_echo) { console.log(`[webhook/${channel}] skipping echo`); continue; }
+
+      const senderId  = messaging.sender?.id;
+      const text      = messaging.message?.text || null;
+      const msgId     = messaging.message?.mid || null;
+      const ts        = messaging.timestamp
+        ? new Date(messaging.timestamp).toISOString()
+        : new Date().toISOString();
+
+      console.log(`[webhook/${channel}] message from:`, senderId, '| text:', text?.slice(0, 60));
+
+      if (!senderId) continue;
+
+      // Ignore automated replies
+      if (text && isAutoReply(text)) {
+        console.log(`[webhook/${channel}] auto-reply detected — skipping:`, senderId);
+        continue;
+      }
+
+      // Find the business by page ID
+      const bizCol = channel === 'instagram' ? 'ig_account_id' : 'fb_page_id';
+      console.log(`[webhook/${channel}] looking up business by ${bizCol} = ${pageId}`);
+      const { data: business } = await supabase
+        .from('businesses')
+        .select('*')
+        .eq(bizCol, pageId)
+        .single();
+
+      if (!business) {
+        console.warn(`[webhook/${channel}] NO BUSINESS FOUND for ${bizCol} = ${pageId}`);
+        continue;
+      }
+      console.log(`[webhook/${channel}] matched business:`, business.name);
+
+      // Upsert contact (keyed by PSID, not phone)
+      const contact = await upsertContact({ channelUserId: senderId }, business.id);
+      const conversation = await upsertConversation(contact.id, business.id, channel);
+
+      const contentText = text || '[media message received]';
+
+      // Store inbound message
+      await supabase.from('messages').insert({
+        conversation_id: conversation.id,
+        from_phone: senderId,
+        to_phone: pageId,
+        content: contentText,
+        message_type: 'text',
+        direction: 'inbound',
+        sender_type: 'customer',
+        status: 'delivered',
+        meta_message_id: msgId,
+        timestamp: ts,
+        channel,
+      });
+
+      // Update conversation summary
+      await supabase.from('conversations').update({
+        last_message: contentText,
+        last_message_at: ts,
+        unread_count: (conversation.unread_count || 0) + 1,
+        updated_at: new Date().toISOString(),
+      }).eq('id', conversation.id);
+
+      if (!conversation.ai_enabled || !text) continue;
+
+      const complex   = needsHuman(text);
+      const simple    = isSimpleQuery(text);
+      const threshold = business.ai_auto_threshold || 'simple';
+
+      // Helper: send reply to the right channel and store it
+      async function replyOnChannel(replyText, senderType = 'ai', statusStr = 'sent') {
+        if (channel === 'instagram') {
+          await sendInstagramMessage(business.access_token, senderId, replyText);
+        } else {
+          const token = business.fb_page_token || business.access_token;
+          await sendFacebookMessage(token, senderId, replyText);
+        }
+        await supabase.from('messages').insert({
+          conversation_id: conversation.id,
+          from_phone: pageId,
+          to_phone: senderId,
+          content: replyText,
+          direction: 'outbound',
+          sender_type: senderType,
+          status: statusStr,
+          timestamp: new Date().toISOString(),
+          channel,
+        });
+      }
+
+      if (complex) {
+        await supabase.from('conversations').update({ needs_human: true }).eq('id', conversation.id);
+        await replyOnChannel('Thank you for reaching out! Your message has been flagged for our team and a human agent will get back to you shortly. 🙏');
+        continue;
+      }
+
+      // Generate AI response
+      const history = await getConversationHistory(conversation.id, 12);
+      const claudeMessages = history.map(m => ({
+        role: m.direction === 'inbound' ? 'user' : 'assistant',
+        content: m.content,
+      }));
+      if (!claudeMessages.length || claudeMessages[claudeMessages.length - 1].role !== 'user') {
+        claudeMessages.push({ role: 'user', content: text });
+      }
+
+      const aiRes = await anthropic.messages.create({
+        model: 'claude-opus-4-6',
+        max_tokens: 500,
+        system: business.system_prompt || `You are a helpful customer service assistant for ${business.name}. Be concise, friendly, and helpful.`,
+        messages: claudeMessages,
+      });
+      const aiText = aiRes.content[0]?.text || 'Thank you for your message! We will get back to you shortly.';
+
+      const shouldAutoSend = threshold === 'all' || (threshold === 'simple' && simple);
+
+      if (shouldAutoSend) {
+        await replyOnChannel(aiText, 'ai', 'sent');
+      } else {
+        // Queue as AI suggestion for agent review
+        await supabase.from('messages').insert({
+          conversation_id: conversation.id,
+          from_phone: pageId,
+          to_phone: senderId,
+          content: aiText,
+          direction: 'outbound',
+          sender_type: 'ai_suggestion',
+          status: 'pending_review',
+          timestamp: new Date().toISOString(),
+          channel,
+        });
+        await supabase.from('conversations').update({ needs_human: true }).eq('id', conversation.id);
+      }
+    }
+  }
+}
+
 // ── Main handler ──────────────────────────────────────────────────────────
 exports.handler = async (event) => {
   // ── Webhook verification (GET from Meta) ───────────────────────────────
@@ -451,6 +656,12 @@ exports.handler = async (event) => {
     try {
       const body = JSON.parse(event.body || '{}');
       const entry = body.entry?.[0];
+
+      // ── Route Instagram and Facebook Messenger events ─────────────────────
+      if (body.object === 'instagram' || body.object === 'page') {
+        await handleSocialChannel(body);
+        return { statusCode: 200, body: 'OK' };
+      }
 
       // ── Template status updates (APPROVED / REJECTED / PAUSED) ───────────
       for (const change of (entry?.changes || [])) {
@@ -538,8 +749,8 @@ exports.handler = async (event) => {
       if (!business) return { statusCode: 200, body: 'OK' };
 
       // Upsert contact & conversation
-      const contact = await upsertContact(fromPhone, business.id);
-      const conversation = await upsertConversation(contact.id, business.id);
+      const contact = await upsertContact({ phone: fromPhone }, business.id);
+      const conversation = await upsertConversation(contact.id, business.id, 'whatsapp');
 
       // Store the inbound message
       const UNSUPPORTED_LABELS = {
@@ -561,6 +772,7 @@ exports.handler = async (event) => {
         meta_message_id: message.id,
         media_url: mediaUrl,
         timestamp: ts,
+        channel: 'whatsapp',
       });
 
       // Update conversation last_message
