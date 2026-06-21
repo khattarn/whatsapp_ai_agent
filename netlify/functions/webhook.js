@@ -490,15 +490,27 @@ async function handleLegalAid(business, _contact, conversation, text, fromPhone,
 }
 
 // ── Fetch sender display name from Instagram or Facebook ──────────────────
-async function fetchSenderProfile(channel, senderId, accessToken) {
+// Instagram: use Conversations API to get participant username (IGSID direct lookup is not supported)
+// Facebook:  direct PSID lookup via /me/messages works fine
+async function fetchSenderProfile(channel, pageId, senderId, accessToken) {
   try {
-    const fields = channel === 'instagram' ? 'name,username' : 'name';
-    const res = await fetch(
-      `https://graph.facebook.com/v19.0/${senderId}?fields=${fields}&access_token=${accessToken}`
-    );
-    const data = await res.json();
-    if (data.error) { console.warn('[fetchSenderProfile] API error:', data.error.message); return null; }
-    return data.username || data.name || null;
+    if (channel === 'instagram') {
+      const res = await fetch(
+        `https://graph.facebook.com/v19.0/${pageId}/conversations?user_id=${senderId}&fields=participants&access_token=${accessToken}`
+      );
+      const data = await res.json();
+      if (data.error) { console.warn('[fetchSenderProfile] IG API error:', data.error.message); return null; }
+      const participants = data.data?.[0]?.participants?.data || [];
+      const sender = participants.find(p => p.id === senderId);
+      return sender?.username || sender?.name || null;
+    } else {
+      const res = await fetch(
+        `https://graph.facebook.com/v19.0/${senderId}?fields=name&access_token=${accessToken}`
+      );
+      const data = await res.json();
+      if (data.error) { console.warn('[fetchSenderProfile] FB API error:', data.error.message); return null; }
+      return data.name || null;
+    }
   } catch (e) {
     console.warn('[fetchSenderProfile] failed:', e.message);
     return null;
@@ -555,7 +567,7 @@ async function handleSocialChannel(body) {
       console.log(`[webhook/${channel}] matched business:`, business.name);
 
       // Fetch sender display name (Instagram username or Facebook name)
-      const senderName = await fetchSenderProfile(channel, senderId, business.access_token);
+      const senderName = await fetchSenderProfile(channel, pageId, senderId, business.access_token);
       console.log(`[webhook/${channel}] sender profile:`, senderName || '(not found)');
 
       // Upsert contact (keyed by PSID, not phone)
