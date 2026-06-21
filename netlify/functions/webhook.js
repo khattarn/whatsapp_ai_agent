@@ -492,27 +492,25 @@ async function handleLegalAid(business, _contact, conversation, text, fromPhone,
 // ── Fetch sender display name from Instagram or Facebook ──────────────────
 // Instagram: use Conversations API to get participant username (IGSID direct lookup is not supported)
 // Facebook:  direct PSID lookup via /me/messages works fine
-async function fetchSenderProfile(channel, pageId, senderId, accessToken) {
+// Both Instagram and Facebook use the conversations API to get sender name.
+// Instagram returns username; Facebook returns name.
+// Requires Page Access Token for Facebook (fb_page_token), IG works with system user token.
+async function fetchSenderProfile(channel, pageId, senderId, business) {
   try {
-    if (channel === 'instagram') {
-      const res = await fetch(
-        `https://graph.facebook.com/v19.0/${pageId}/conversations?user_id=${senderId}&fields=participants&access_token=${accessToken}`
-      );
-      const data = await res.json();
-      if (data.error) { console.warn('[fetchSenderProfile] IG API error:', data.error.message); return null; }
-      const participants = data.data?.[0]?.participants?.data || [];
-      const sender = participants.find(p => p.id === senderId);
-      return sender?.username || sender?.name || null;
-    } else {
-      const res = await fetch(
-        `https://graph.facebook.com/v19.0/${senderId}?fields=name&access_token=${accessToken}`
-      );
-      const data = await res.json();
-      if (data.error) { console.warn('[fetchSenderProfile] FB API error:', data.error.message); return null; }
-      return data.name || null;
-    }
+    const token = channel === 'facebook'
+      ? (business.fb_page_token || business.access_token)
+      : business.access_token;
+
+    const res = await fetch(
+      `https://graph.facebook.com/v19.0/${pageId}/conversations?user_id=${senderId}&fields=participants&access_token=${token}`
+    );
+    const data = await res.json();
+    if (data.error) { console.warn(`[fetchSenderProfile/${channel}] API error:`, data.error.message); return null; }
+    const participants = data.data?.[0]?.participants?.data || [];
+    const sender = participants.find(p => p.id === senderId);
+    return sender?.username || sender?.name || null;
   } catch (e) {
-    console.warn('[fetchSenderProfile] failed:', e.message);
+    console.warn(`[fetchSenderProfile/${channel}] failed:`, e.message);
     return null;
   }
 }
@@ -567,7 +565,7 @@ async function handleSocialChannel(body) {
       console.log(`[webhook/${channel}] matched business:`, business.name);
 
       // Fetch sender display name (Instagram username or Facebook name)
-      const senderName = await fetchSenderProfile(channel, pageId, senderId, business.access_token);
+      const senderName = await fetchSenderProfile(channel, pageId, senderId, business);
       console.log(`[webhook/${channel}] sender profile:`, senderName || '(not found)');
 
       // Upsert contact (keyed by PSID, not phone)
