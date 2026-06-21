@@ -183,6 +183,10 @@ async function upsertContact({ phone, channelUserId, name: displayName }, busine
       const advName = await resolveAdvocateName(phone);
       if (advName) { updatePayload.name = advName; existing.name = advName; }
     }
+    // Self-heal: if name is still the PSID, update to real display name
+    if (channelUserId && displayName && existing.name === channelUserId) {
+      updatePayload.name = displayName;
+    }
     await supabase.from('contacts').update(updatePayload).eq('id', existing.id);
     return existing;
   }
@@ -485,6 +489,22 @@ async function handleLegalAid(business, _contact, conversation, text, fromPhone,
   await reply(languagePrompt());
 }
 
+// ── Fetch sender display name from Instagram or Facebook ──────────────────
+async function fetchSenderProfile(channel, senderId, accessToken) {
+  try {
+    const fields = channel === 'instagram' ? 'name,username' : 'name';
+    const res = await fetch(
+      `https://graph.facebook.com/v19.0/${senderId}?fields=${fields}&access_token=${accessToken}`
+    );
+    const data = await res.json();
+    if (data.error) { console.warn('[fetchSenderProfile] API error:', data.error.message); return null; }
+    return data.username || data.name || null;
+  } catch (e) {
+    console.warn('[fetchSenderProfile] failed:', e.message);
+    return null;
+  }
+}
+
 // ── Instagram / Facebook Messenger handler ────────────────────────────────
 // Called when body.object === 'instagram' or 'page'.
 // Both channels share the same Messenger Platform event structure.
@@ -534,8 +554,12 @@ async function handleSocialChannel(body) {
       }
       console.log(`[webhook/${channel}] matched business:`, business.name);
 
+      // Fetch sender display name (Instagram username or Facebook name)
+      const senderName = await fetchSenderProfile(channel, senderId, business.access_token);
+      console.log(`[webhook/${channel}] sender profile:`, senderName || '(not found)');
+
       // Upsert contact (keyed by PSID, not phone)
-      const contact = await upsertContact({ channelUserId: senderId }, business.id);
+      const contact = await upsertContact({ channelUserId: senderId, name: senderName }, business.id);
       const conversation = await upsertConversation(contact.id, business.id, channel);
 
       const contentText = text || '[media message received]';
