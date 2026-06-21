@@ -300,6 +300,19 @@
       .tpl-btn-row .tpl-rm-btn { grid-column: 2; }
     }
 
+    /* ── Channel badges ─── */
+    #channel-filter-tabs { display: flex; gap: 4px; padding: 4px 12px 8px; border-bottom: 1px solid var(--border); }
+    .channel-chip { padding: 3px 10px; border-radius: 20px; font-size: 11px; cursor: pointer; border: 1px solid var(--border); background: #fff; color: var(--muted); transition: all .15s; }
+    .channel-chip.active { color: #fff; border-color: transparent; }
+    .channel-chip.active[data-channel="all"]       { background: #6B7280; }
+    .channel-chip.active[data-channel="whatsapp"]  { background: #25D366; }
+    .channel-chip.active[data-channel="instagram"] { background: #C13584; }
+    .channel-chip.active[data-channel="facebook"]  { background: #1877F2; }
+    .ch-badge { display: inline-flex; align-items: center; gap: 3px; font-size: 10px; font-weight: 700; padding: 1px 6px; border-radius: 8px; white-space: nowrap; }
+    .ch-badge.whatsapp  { background: #DCFCE7; color: #15803D; }
+    .ch-badge.instagram { background: #FCE7F3; color: #9D174D; }
+    .ch-badge.facebook  { background: #DBEAFE; color: #1D4ED8; }
+
     /* ── Spinner / Toast ─── */
     .spinner { display: inline-block; width: 14px; height: 14px; border: 2px solid rgba(255,255,255,.4); border-top-color: #fff; border-radius: 50%; animation: spin .6s linear infinite; vertical-align: middle; }
     .spinner.dark { border-color: rgba(0,0,0,.1); border-top-color: var(--green); }
@@ -369,6 +382,12 @@
     <div class="filter-chip active" data-filter="all">All</div>
     <div class="filter-chip" data-filter="needs_human">⚠️ Review</div>
     <div class="filter-chip" data-filter="resolved">✅ Resolved</div>
+  </div>
+  <div id="channel-filter-tabs">
+    <div class="channel-chip active" data-channel="all">All channels</div>
+    <div class="channel-chip" data-channel="whatsapp">📱 WA</div>
+    <div class="channel-chip" data-channel="instagram">📸 IG</div>
+    <div class="channel-chip" data-channel="facebook">🔵 FB</div>
   </div>
   <div id="conv-empty" style="display:none">
     <div style="font-size:40px;text-align:center;padding-top:40px">💬</div>
@@ -937,6 +956,7 @@ const state = {
   currentConv: null,
   messages: [],
   filter: 'all',
+  channelFilter: 'all',
   searchQ: '',
   pollTimer: null,
   csvRows: [],
@@ -1025,6 +1045,7 @@ async function loadConversations() {
   let url = `conversations?businessId=${biz.id}`;
   if (state.filter === 'resolved') url += '&status=resolved';
   else if (state.filter === 'needs_human') url += '&needsHuman=true';
+  if (state.channelFilter && state.channelFilter !== 'all') url += `&channel=${state.channelFilter}`;
 
   try {
     const data = await api(url);
@@ -1042,14 +1063,20 @@ function renderConvList(convs) {
   if (!filtered.length) { list.innerHTML = ''; if (empty) empty.style.display = 'block'; return; }
   if (empty) empty.style.display = 'none';
 
+  const CHANNEL_BADGE = {
+    whatsapp:  { icon: '📱', label: 'WA',  cls: 'whatsapp'  },
+    instagram: { icon: '📸', label: 'IG',  cls: 'instagram' },
+    facebook:  { icon: '🔵', label: 'FB',  cls: 'facebook'  },
+  };
   list.innerHTML = filtered.map(c => {
     const contact = c.contacts || {};
-    const name = contact.name || contact.phone || 'Unknown';
+    const name = contact.name || contact.phone || contact.channel_user_id || 'Unknown';
     const biz = c.businesses || {};
+    const ch = CHANNEL_BADGE[c.channel] || CHANNEL_BADGE.whatsapp;
     return `<div class="conv-item ${c.id === state.currentConvId ? 'active' : ''}" data-id="${c.id}">
       <div class="conv-avatar" style="background:${biz.color || '#25D366'}">${initials(name)}</div>
       <div class="conv-info">
-        <div class="conv-name">${name}</div>
+        <div class="conv-name">${name} <span class="ch-badge ${ch.cls}">${ch.icon} ${ch.label}</span></div>
         <div class="conv-preview">${(c.last_message || 'No messages').slice(0, 55)}</div>
       </div>
       <div class="conv-meta">
@@ -1090,11 +1117,14 @@ function showChatArea(show) {
 function renderChatHeader(conv) {
   const contact = conv.contacts || {};
   const biz = conv.businesses || {};
-  const name = contact.name || contact.phone || 'Unknown';
+  const name = contact.name || contact.phone || contact.channel_user_id || 'Unknown';
+  const CHANNEL_LABEL = { whatsapp: '📱 WhatsApp', instagram: '📸 Instagram', facebook: '🔵 Facebook' };
+  const channelLabel = CHANNEL_LABEL[conv.channel] || '📱 WhatsApp';
+  const identifier = contact.phone || contact.channel_user_id || '';
   document.getElementById('chat-avatar-el').textContent = initials(name);
   document.getElementById('chat-avatar-el').style.background = biz.color || '#25D366';
   document.getElementById('chat-name-el').textContent = name;
-  document.getElementById('chat-sub-el').textContent = `${contact.phone} · ${biz.name || ''}`;
+  document.getElementById('chat-sub-el').textContent = `${identifier}${identifier ? ' · ' : ''}${channelLabel} · ${biz.name || ''}`;
   const aiStatus = document.getElementById('ai-status');
   aiStatus.textContent = conv.ai_enabled ? '🤖 AI On' : '🤖 AI Off';
   aiStatus.className = `ai-status ${conv.ai_enabled ? 'on' : 'off'}`;
@@ -1223,6 +1253,14 @@ document.querySelectorAll('.filter-chip').forEach(chip => {
     document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
     chip.classList.add('active');
     state.filter = chip.dataset.filter;
+    loadConversations();
+  });
+});
+document.querySelectorAll('.channel-chip').forEach(chip => {
+  chip.addEventListener('click', () => {
+    document.querySelectorAll('.channel-chip').forEach(c => c.classList.remove('active'));
+    chip.classList.add('active');
+    state.channelFilter = chip.dataset.channel;
     loadConversations();
   });
 });
@@ -1764,6 +1802,9 @@ document.getElementById('bc-send-btn').addEventListener('click', async () => {
 });
 
 async function loadBroadcastHistory() {
+  // Rebuilding the DOM invalidates all cached report panels
+  Object.keys(_reportCache).forEach(k => delete _reportCache[k]);
+
   const bizId = document.getElementById('bc-hist-biz-select').value || document.getElementById('bc-biz-select').value;
   const container = document.getElementById('bc-history');
   if (!bizId) { container.innerHTML = '<div style="color:var(--muted);font-size:13px;text-align:center;padding:20px">Select a business above</div>'; return; }
