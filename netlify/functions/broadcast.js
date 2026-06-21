@@ -180,11 +180,51 @@ exports.handler = async (event) => {
   const headers = { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' };
   if (event.httpMethod === 'OPTIONS') return { statusCode: 200, headers };
 
-  // ── GET: list broadcasts ───────────────────────────────────────────────
+  // ── GET: list broadcasts / per-broadcast detail ───────────────────────
   if (event.httpMethod === 'GET') {
     const q = event.queryStringParameters || {};
     if (!q.businessId) return { statusCode: 400, headers, body: JSON.stringify({ error: 'businessId required' }) };
 
+    // Detail view: per-recipient engagement for a specific broadcast
+    if (q.broadcastId) {
+      const { data: broadcast } = await supabase
+        .from('broadcasts').select('*')
+        .eq('id', q.broadcastId).eq('business_id', q.businessId).single();
+      if (!broadcast) return { statusCode: 404, headers, body: JSON.stringify({ error: 'Broadcast not found' }) };
+
+      const { data: rows } = await supabase
+        .from('broadcast_recipients')
+        .select('contact_id, status, meta_message_id, sent_at, delivered_at, read_at, clicked_at, click_payload, error_message, contacts(id, name, phone)')
+        .eq('broadcast_id', q.broadcastId)
+        .order('status', { ascending: true });
+
+      const recipients = (rows || []).map(r => ({
+        contactId: r.contact_id,
+        name: r.contacts?.name || r.contacts?.phone || '—',
+        phone: r.contacts?.phone || '—',
+        status: r.status,
+        sentAt: r.sent_at,
+        deliveredAt: r.delivered_at,
+        readAt: r.read_at,
+        clickedAt: r.clicked_at,
+        clickPayload: r.click_payload,
+        errorMessage: r.error_message,
+      }));
+
+      const summary = {
+        total: recipients.length,
+        pending: recipients.filter(r => r.status === 'pending').length,
+        sent: recipients.filter(r => r.status === 'sent').length,
+        failed: recipients.filter(r => r.status === 'failed').length,
+        delivered: recipients.filter(r => r.deliveredAt).length,
+        read: recipients.filter(r => r.readAt).length,
+        clicked: recipients.filter(r => r.clickedAt).length,
+      };
+
+      return { statusCode: 200, headers, body: JSON.stringify({ broadcast, recipients, summary }) };
+    }
+
+    // List all broadcasts for this business
     const { data } = await supabase
       .from('broadcasts')
       .select('*')
@@ -195,21 +235,81 @@ exports.handler = async (event) => {
     return { statusCode: 200, headers, body: JSON.stringify({ broadcasts: data || [] }) };
   }
 
-  // ── PATCH: cancel a scheduled broadcast ───────────────────────────────
+  // ── PATCH: cancel or resend a broadcast ──────────────────────────────
   if (event.httpMethod === 'PATCH') {
     try {
-      const { broadcastId, action } = JSON.parse(event.body || '{}');
-      if (!broadcastId || action !== 'cancel') {
-        return { statusCode: 400, headers, body: JSON.stringify({ error: 'broadcastId and action=cancel required' }) };
+      const { broadcastId, action, businessId } = JSON.parse(event.body || '{}');
+      if (!broadcastId || !action) {
+        return { statusCode: 400, headers, body: JSON.stringify({ error: 'broadcastId and action required' }) };
       }
-      const { data, error } = await supabase.from('broadcasts')
-        .update({ status: 'cancelled' })
-        .eq('id', broadcastId)
-        .eq('status', 'scheduled')
-        .select('id');
-      if (error) return { statusCode: 500, headers, body: JSON.stringify({ error: error.message }) };
-      if (!data?.length) return { statusCode: 409, headers, body: JSON.stringify({ error: 'Broadcast not found or already past scheduled status' }) };
-      return { statusCode: 200, headers, body: JSON.stringify({ success: true }) };
+
+      // ── cancel ────────────────────────────────────────────────────────
+      if (action === 'cancel') {
+        const { data, error } = await supabase.from('broadcasts')
+          .update({ status: 'cancelled' })
+          .eq('id', broadcastId)
+          .eq('status', 'scheduled')
+          .select('id');
+        if (error) return { statusCode: 500, headers, body: JSON.stringify({ error: error.message }) };
+        if (!data?.length) return { statusCode: 409, headers, body: JSON.stringify({ error: 'Broadcast not found or already past scheduled status' }) };
+        return { statusCode: 200, headers, body: JSON.stringify({ success: true }) };
+      }
+
+      // ── resend: return pending/failed contacts for client-side batching ──
+      if (action === 'resend') {
+        if (!businessId) return { statusCode: 400, headers, body: JSON.stringify({ error: 'businessId required for resend' }) };
+
+        const { data: broadcast } = await supabase.from('broadcasts').select('*')
+          .eq('id', broadcastId).eq('business_id', businessId).single();
+        if (!broadcast) return { statusCode: 404, headers, body: JSON.stringify({ error: 'Broadcast not found' }) };
+
+        const { data: rows } = await supabase
+          .from('broadcast_recipients')
+          .select('contact_id, contacts(id, name, phone)')
+          .eq('broadcast_id', broadcastId)
+          .in('status', ['pending', 'failed']);
+
+        if (!rows?.length) {
+          return { statusCode: 200, headers, body: JSON.stringify({ success: true, contacts: [], total: 0, message: 'No pending recipients' }) };
+        }
+
+        const contacts = rows.map(r => ({
+          id: r.contacts.id,
+          phone: r.contacts.phone,
+          name: r.contacts.name || r.contacts.phone,
+        }));
+
+        const campaign = {
+          messageType: broadcast.message_type,
+          message: broadcast.message,
+          templateName: broadcast.template_name,
+          templateLanguage: broadcast.template_language || 'en',
+          templateVariables: broadcast.template_variables || [],
+          templateButtons: broadcast.template_buttons || [],
+          mediaUrl: broadcast.media_url,
+          mediaType: broadcast.media_type || 'none',
+          mediaCaption: broadcast.media_caption,
+        };
+
+        return {
+          statusCode: 200,
+          headers,
+          body: JSON.stringify({
+            success: true,
+            broadcastId,
+            contacts,
+            campaign,
+            displayMsg: broadcast.message,
+            total: contacts.length,
+            existingTotals: {
+              sent: broadcast.sent_count || 0,
+              failed: broadcast.failed_count || 0,
+            },
+          }),
+        };
+      }
+
+      return { statusCode: 400, headers, body: JSON.stringify({ error: 'Unknown action' }) };
     } catch (err) {
       return { statusCode: 500, headers, body: JSON.stringify({ error: err.message }) };
     }

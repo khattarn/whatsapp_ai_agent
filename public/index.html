@@ -191,6 +191,29 @@
     .bc-status.cancelled { background: #F3F4F6; color: #9CA3AF; text-decoration: line-through; }
     .type-badge { display: inline-block; padding: 1px 7px; border-radius: 8px; font-size: 11px; font-weight: 700; background: #E0E7FF; color: #3730A3; margin-left: 6px; }
 
+    /* ── Broadcast report panel ─── */
+    .bc-report-panel { margin-top: 12px; border-top: 1px solid var(--border); padding-top: 12px; }
+    .bc-report-summary { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; }
+    .bc-report-stat { display: inline-flex; align-items: center; gap: 4px; padding: 3px 10px; border-radius: 12px; font-size: 12px; font-weight: 600; }
+    .bc-report-stat.s-total    { background: #F3F4F6; color: #374151; }
+    .bc-report-stat.s-sent     { background: #DCFCE7; color: #166534; }
+    .bc-report-stat.s-pending  { background: #FEF9C3; color: #854D0E; }
+    .bc-report-stat.s-failed   { background: #FEE2E2; color: #991B1B; }
+    .bc-report-stat.s-delivered{ background: #DBEAFE; color: #1D4ED8; }
+    .bc-report-stat.s-read     { background: #EDE9FE; color: #5B21B6; }
+    .bc-report-stat.s-clicked  { background: #FDF4FF; color: #7C3AED; }
+    .bc-report-table-wrap { overflow-x: auto; max-height: 380px; overflow-y: auto; border: 1px solid var(--border); border-radius: 8px; }
+    .bc-report-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+    .bc-report-table th { background: #F9FAFB; color: #6B7280; font-weight: 600; text-align: left; padding: 7px 10px; position: sticky; top: 0; z-index: 1; border-bottom: 1px solid var(--border); white-space: nowrap; }
+    .bc-report-table td { padding: 6px 10px; border-bottom: 1px solid #F3F4F6; vertical-align: middle; }
+    .bc-report-table tr:last-child td { border-bottom: none; }
+    .bc-report-table tr.row-pending td { background: #FFFBEB; }
+    .bc-report-table tr.row-failed td  { background: #FFF5F5; }
+    .bc-report-table td.name-cell  { font-weight: 500; max-width: 130px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .bc-report-table td.phone-cell { font-family: monospace; color: var(--muted); }
+    .bc-error-text { color: #DC2626; font-size: 11px; max-width: 160px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: block; }
+    .bc-click-text { color: #7C3AED; font-size: 11px; max-width: 130px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: block; }
+
     /* ── Settings panel ─── */
     .setting-group { margin-bottom: 20px; }
 
@@ -1749,25 +1772,52 @@ async function loadBroadcastHistory() {
     const data = await api(`broadcast?businessId=${bizId}`);
     if (!data.broadcasts?.length) { container.innerHTML = '<div style="color:var(--muted);font-size:13px;text-align:center;padding:20px">No campaigns yet</div>'; return; }
     const typeIcon = { text:'📝', template:'📋', image:'🖼️', video:'🎬' };
-    container.innerHTML = data.broadcasts.map(b => `
-      <div class="broadcast-history-item">
+    container.innerHTML = data.broadcasts.map(b => {
+      const sentCount   = b.sent_count   ?? 0;
+      const failedCount = b.failed_count ?? 0;
+      // Pending = recipients not yet accounted for. For interrupted broadcasts (status='sending')
+      // sent_count is null so the full recipient_count shows as pending.
+      const pendingEst = Math.max(0, (b.recipient_count || 0) - sentCount - failedCount);
+      const isInterrupted = b.status === 'sending';
+      const hasResend = isInterrupted || pendingEst > 0 || failedCount > 0;
+      const resendLabel = isInterrupted
+        ? `Resume Send (${pendingEst || b.recipient_count} pending)`
+        : pendingEst > 0 && failedCount > 0
+          ? `Resend ${pendingEst + failedCount} (${pendingEst} pending + ${failedCount} failed)`
+          : pendingEst > 0
+            ? `Resend ${pendingEst} Pending`
+            : `Retry ${failedCount} Failed`;
+
+      const statusLabel = isInterrupted ? 'INTERRUPTED' : b.status.toUpperCase();
+      const showReport  = b.status !== 'scheduled' && b.status !== 'cancelled';
+
+      return `
+      <div class="broadcast-history-item" id="bhi-${b.id}">
         <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
           <span class="bc-name">${b.name}</span>
-          <span class="bc-status ${b.status}">${b.status.toUpperCase()}</span>
+          <span class="bc-status ${isInterrupted ? 'sending' : b.status}">${statusLabel}</span>
           <span class="type-badge">${typeIcon[b.message_type || 'text'] || '📝'} ${(b.message_type || 'text').toUpperCase()}</span>
-          ${b.status === 'scheduled' ? `<button onclick="cancelBroadcast('${b.id}')" style="margin-left:auto;background:#FEE2E2;color:#991B1B;border:none;border-radius:6px;padding:3px 10px;font-size:11px;font-weight:600;cursor:pointer">✕ Cancel</button>` : ''}
+          <div style="margin-left:auto;display:flex;gap:6px;flex-wrap:wrap">
+            ${showReport ? `<button onclick="toggleReport('${b.id}','${bizId}')" id="rpt-btn-${b.id}" style="background:#EDE9FE;color:#5B21B6;border:none;border-radius:6px;padding:3px 10px;font-size:11px;font-weight:600;cursor:pointer">📊 View Report</button>` : ''}
+            ${hasResend  ? `<button onclick="resendBroadcast('${b.id}','${bizId}')" id="rsnd-btn-${b.id}" style="background:#FEF9C3;color:#854D0E;border:none;border-radius:6px;padding:3px 10px;font-size:11px;font-weight:600;cursor:pointer">🔄 ${resendLabel}</button>` : ''}
+            ${b.status === 'scheduled' ? `<button onclick="cancelBroadcast('${b.id}')" style="background:#FEE2E2;color:#991B1B;border:none;border-radius:6px;padding:3px 10px;font-size:11px;font-weight:600;cursor:pointer">✕ Cancel</button>` : ''}
+          </div>
         </div>
         <div class="bc-meta">
           ${b.status === 'scheduled' && b.scheduled_at
             ? `<span style="color:#5B21B6">🕐 Scheduled: ${dayjs(b.scheduled_at).format('DD MMM YYYY, HH:mm')}</span>`
             : `<span>📅 ${dayjs(b.created_at).format('DD MMM YYYY, HH:mm')}</span>`}
           <span>👥 ${b.recipient_count || 0} recipients</span>
-          ${b.sent_count != null ? `<span>✅ ${b.sent_count} sent</span>` : ''}
-          ${(b.failed_count || 0) > 0 ? `<span style="color:#DC2626">❌ ${b.failed_count} failed</span>` : ''}
+          ${b.sent_count != null ? `<span style="color:#166534">✅ ${sentCount} sent</span>` : ''}
+          ${failedCount > 0 ? `<span style="color:#DC2626">❌ ${failedCount} failed</span>` : ''}
+          ${pendingEst > 0 && b.status !== 'scheduled' ? `<span style="color:#92400E">⏳ ${pendingEst} pending</span>` : ''}
           ${b.template_name ? `<span>Template: <strong>${b.template_name}</strong></span>` : ''}
         </div>
         <div style="font-size:12px;color:var(--muted);margin-top:6px;background:#f9fafb;padding:8px;border-radius:6px">${(b.message || '').slice(0, 120)}</div>
-      </div>`).join('');
+        ${showReport ? `<div id="rpt-panel-${b.id}" class="bc-report-panel" style="display:none"><div id="rpt-body-${b.id}" style="font-size:12px;color:var(--muted);padding:6px 0">Loading…</div></div>` : ''}
+        <div id="rsnd-progress-${b.id}" style="display:none;font-size:12px;margin-top:8px;padding:8px;background:#FFFBEB;border-radius:6px;border:1px solid #FCD34D"></div>
+      </div>`;
+    }).join('');
   } catch (e) {
     container.innerHTML = '<div style="color:red;font-size:13px;text-align:center;padding:20px">Failed to load history</div>';
   }
@@ -1780,6 +1830,157 @@ async function cancelBroadcast(broadcastId) {
     if (res.success) { toast('Campaign cancelled'); loadBroadcastHistory(); }
     else toast('❌ ' + (res.error || 'Cancel failed'));
   } catch (e) { toast('❌ ' + e.message); }
+}
+
+// Cache so we don't re-fetch a report that's already loaded
+const _reportCache = {};
+
+async function toggleReport(broadcastId, bizId) {
+  const panel = document.getElementById(`rpt-panel-${broadcastId}`);
+  const btn   = document.getElementById(`rpt-btn-${broadcastId}`);
+  if (!panel) return;
+
+  if (panel.style.display !== 'none') {
+    panel.style.display = 'none';
+    if (btn) btn.textContent = '📊 View Report';
+    return;
+  }
+
+  panel.style.display = 'block';
+  if (btn) btn.textContent = '📊 Hide Report';
+  if (_reportCache[broadcastId]) return; // already rendered
+
+  const body = document.getElementById(`rpt-body-${broadcastId}`);
+  if (body) body.textContent = 'Loading…';
+
+  try {
+    const data = await api(`broadcast?businessId=${bizId}&broadcastId=${broadcastId}`);
+    _reportCache[broadcastId] = true;
+
+    const { recipients, summary } = data;
+
+    // Sort: pending first → failed → sent (within sent: most engaged last so top rows need attention)
+    const engScore = r => (r.clickedAt ? 8 : 0) + (r.readAt ? 4 : 0) + (r.deliveredAt ? 2 : 0) + (r.sentAt ? 1 : 0);
+    const statusRank = { pending: 0, failed: 1, sent: 2 };
+    recipients.sort((a, b) => {
+      const rd = (statusRank[a.status] ?? 3) - (statusRank[b.status] ?? 3);
+      if (rd !== 0) return rd;
+      return engScore(b) - engScore(a); // more engaged rows bubble down within sent
+    });
+
+    const fmt = iso => iso ? dayjs(iso).format('DD MMM HH:mm') : '—';
+    const sentIcon = r => r.status === 'pending' ? '<span style="color:#92400E">⏳</span>'
+                        : r.status === 'failed'  ? '<span style="color:#DC2626">❌</span>'
+                        : '<span style="color:#166534">✅</span>';
+
+    body.innerHTML = `
+      <div class="bc-report-summary">
+        <span class="bc-report-stat s-total">👥 ${summary.total} total</span>
+        ${summary.sent      > 0 ? `<span class="bc-report-stat s-sent">✅ ${summary.sent} sent</span>` : ''}
+        ${summary.pending   > 0 ? `<span class="bc-report-stat s-pending">⏳ ${summary.pending} pending</span>` : ''}
+        ${summary.failed    > 0 ? `<span class="bc-report-stat s-failed">❌ ${summary.failed} failed</span>` : ''}
+        ${summary.delivered > 0 ? `<span class="bc-report-stat s-delivered">📨 ${summary.delivered} delivered</span>` : ''}
+        ${summary.read      > 0 ? `<span class="bc-report-stat s-read">👁 ${summary.read} read</span>` : ''}
+        ${summary.clicked   > 0 ? `<span class="bc-report-stat s-clicked">🔘 ${summary.clicked} clicked</span>` : ''}
+      </div>
+      <div class="bc-report-table-wrap">
+        <table class="bc-report-table">
+          <thead>
+            <tr>
+              <th>#</th><th>Name</th><th>Phone</th>
+              <th>Sent</th><th>Delivered</th><th>Read</th><th>Clicked</th><th>Error</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${recipients.map((r, i) => `
+              <tr class="row-${r.status}">
+                <td style="color:var(--muted);font-size:11px">${i + 1}</td>
+                <td class="name-cell" title="${r.name}">${r.name}</td>
+                <td class="phone-cell">${r.phone}</td>
+                <td>${sentIcon(r)}${r.sentAt ? ` <span style="color:var(--muted);font-size:10px">${fmt(r.sentAt)}</span>` : ''}</td>
+                <td>${r.deliveredAt ? `📨 <span style="color:var(--muted);font-size:10px">${fmt(r.deliveredAt)}</span>` : '—'}</td>
+                <td>${r.readAt     ? `👁 <span style="color:var(--muted);font-size:10px">${fmt(r.readAt)}</span>` : '—'}</td>
+                <td>${r.clickedAt  ? `<span class="bc-click-text" title="${r.clickPayload || ''}">🔘 ${r.clickPayload || 'clicked'}</span>` : '—'}</td>
+                <td>${r.errorMessage ? `<span class="bc-error-text" title="${r.errorMessage}">${r.errorMessage}</span>` : '—'}</td>
+              </tr>`).join('')}
+          </tbody>
+        </table>
+      </div>`;
+  } catch (e) {
+    if (body) body.innerHTML = `<span style="color:red">Failed to load report: ${e.message}</span>`;
+  }
+}
+
+async function resendBroadcast(broadcastId, bizId) {
+  const btn         = document.getElementById(`rsnd-btn-${broadcastId}`);
+  const progressDiv = document.getElementById(`rsnd-progress-${broadcastId}`);
+  if (!btn || !progressDiv) return;
+
+  btn.disabled = true;
+  btn.textContent = '⏳ Preparing…';
+  progressDiv.style.display = 'block';
+  progressDiv.textContent = 'Fetching pending recipients…';
+
+  try {
+    const res = await api('broadcast', {
+      method: 'PATCH',
+      body: JSON.stringify({ broadcastId, action: 'resend', businessId: bizId }),
+    });
+
+    if (!res.success) {
+      progressDiv.innerHTML = `<span style="color:red">❌ ${res.error || 'Resend failed'}</span>`;
+      btn.disabled = false;
+      btn.textContent = '🔄 Retry';
+      return;
+    }
+
+    if (!res.contacts?.length) {
+      progressDiv.innerHTML = '<span style="color:green">✅ No pending recipients — nothing to resend.</span>';
+      btn.disabled = false;
+      return;
+    }
+
+    const { contacts: allContacts, campaign, displayMsg, total, existingTotals } = res;
+    let totalSent   = existingTotals?.sent   || 0;
+    let totalFailed = existingTotals?.failed || 0;
+    let resSent = 0, resFailed = 0;
+    let firstError = null;
+
+    const BATCH = 10;
+    for (let i = 0; i < allContacts.length; i += BATCH) {
+      const batch  = allContacts.slice(i, i + BATCH);
+      const isFinal = i + BATCH >= allContacts.length;
+      progressDiv.innerHTML = `⏳ Resending ${Math.min(i + BATCH, total)} / ${total}…`;
+
+      const bRes = await api('broadcast-send', {
+        method: 'POST',
+        body: JSON.stringify({ broadcastId, businessId: bizId, contacts: batch, campaign, displayMsg, isFinal, runningTotals: { sent: totalSent, failed: totalFailed } }),
+      });
+
+      if (!bRes.success) {
+        progressDiv.innerHTML = `<span style="color:red">❌ Batch error: ${bRes.error || 'unknown'}</span>`;
+        btn.disabled = false;
+        return;
+      }
+      resSent   += bRes.sent;
+      resFailed += bRes.failed;
+      totalSent   += bRes.sent;
+      totalFailed += bRes.failed;
+      if (!firstError && bRes.sample_errors?.length) firstError = bRes.sample_errors[0].error;
+    }
+
+    const errNote = firstError ? `<br><span style="font-size:11px;color:#DC2626">Sample error: ${firstError}</span>` : '';
+    progressDiv.innerHTML = `<span style="color:${resFailed === 0 ? '#166534' : '#92400E'}">✅ Resend complete — Sent: ${resSent} | Failed: ${resFailed}</span>${errNote}`;
+    btn.style.display = 'none';
+
+    // Invalidate cached report and reload history
+    delete _reportCache[broadcastId];
+    setTimeout(() => loadBroadcastHistory(), 1500);
+  } catch (e) {
+    progressDiv.innerHTML = `<span style="color:red">❌ ${e.message}</span>`;
+    btn.disabled = false;
+    btn.textContent = '🔄 Retry';
+  }
 }
 
 // ── Settings ───────────────────────────────────────────────────────────────

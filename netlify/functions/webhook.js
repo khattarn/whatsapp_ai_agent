@@ -475,15 +475,32 @@ exports.handler = async (event) => {
         const UNDELIVERABLE_CODES = [131026, 131042];
         for (const s of value.statuses) {
           const errObj = s.errors?.[0] || null;
+          const evtTs = new Date(parseInt(s.timestamp) * 1000).toISOString();
           const { error: evtErr } = await supabase.from('wa_message_events').insert({
             wamid: s.id,
             phone: s.recipient_id,
             status: s.status,
-            timestamp: new Date(parseInt(s.timestamp) * 1000).toISOString(),
+            timestamp: evtTs,
             error_code: errObj?.code || null,
             error_title: errObj?.title || null,
           });
           if (evtErr) console.error('[webhook] wa_message_events insert failed:', evtErr.message);
+
+          // Update broadcast recipient engagement by WAMID
+          if (s.status === 'delivered') {
+            await supabase.from('broadcast_recipients')
+              .update({ delivered_at: evtTs })
+              .eq('meta_message_id', s.id);
+          } else if (s.status === 'read') {
+            await supabase.from('broadcast_recipients')
+              .update({ read_at: evtTs })
+              .eq('meta_message_id', s.id);
+          } else if (s.status === 'failed' && errObj) {
+            await supabase.from('broadcast_recipients')
+              .update({ status: 'failed', error_message: `${errObj.code}: ${errObj.title}` })
+              .eq('meta_message_id', s.id)
+              .eq('status', 'sent');
+          }
 
           // Mark permanently undeliverable advocates so cron skips them
           if (s.status === 'failed' && UNDELIVERABLE_CODES.includes(errObj?.code)) {
@@ -553,6 +570,33 @@ exports.handler = async (event) => {
         unread_count: (conversation.unread_count || 0) + 1,
         updated_at: new Date().toISOString(),
       }).eq('id', conversation.id);
+
+      // ── Track template quick-reply / interactive button clicks for broadcast reporting ──
+      let clickPayload = null;
+      if (msgType === 'button' && message.button) {
+        clickPayload = message.button.payload
+          ? `${message.button.text} [${message.button.payload}]`
+          : message.button.text;
+      } else if (msgType === 'interactive' && message.interactive?.type === 'button_reply') {
+        const btn = message.interactive.button_reply;
+        clickPayload = btn.id ? `${btn.title} [${btn.id}]` : btn.title;
+      }
+      if (clickPayload) {
+        const { data: recip } = await supabase
+          .from('broadcast_recipients')
+          .select('id')
+          .eq('contact_id', contact.id)
+          .eq('status', 'sent')
+          .is('clicked_at', null)
+          .order('sent_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        if (recip) {
+          await supabase.from('broadcast_recipients')
+            .update({ clicked_at: ts, click_payload: clickPayload })
+            .eq('id', recip.id);
+        }
+      }
 
       // ── Opt-out / re-subscribe handling — intercepts before any AI routing ────
       const OPT_OUT_RE = /^\s*(stop|unsubscribe|cancel|opt[\s-]?out|end|quit)\s*$/i;
