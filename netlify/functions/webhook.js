@@ -194,7 +194,7 @@ async function upsertContact({ phone, channelUserId, name: displayName }, busine
     if (advName) name = advName;
   }
 
-  const { data: created } = await supabase
+  const { data: created, error: insertErr } = await supabase
     .from('contacts')
     .insert({
       phone: phone || null,
@@ -205,6 +205,7 @@ async function upsertContact({ phone, channelUserId, name: displayName }, busine
     })
     .select()
     .single();
+  if (insertErr) console.error('[upsertContact] insert failed:', insertErr.message, { phone, channelUserId });
   return created;
 }
 

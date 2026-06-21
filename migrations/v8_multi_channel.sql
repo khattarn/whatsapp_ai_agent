@@ -12,6 +12,10 @@ ALTER TABLE conversations
 ALTER TABLE contacts
   ADD COLUMN IF NOT EXISTS channel_user_id TEXT;
 
+-- Allow phone to be NULL for Instagram/Facebook contacts (PSID-only)
+ALTER TABLE contacts
+  ALTER COLUMN phone DROP NOT NULL;
+
 CREATE INDEX IF NOT EXISTS contacts_channel_user_id_business_idx
   ON contacts (channel_user_id, business_id);
 
