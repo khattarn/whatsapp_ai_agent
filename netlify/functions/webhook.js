@@ -692,6 +692,7 @@ exports.handler = async (event) => {
     // Always return 200 immediately so Meta doesn't retry
     try {
       const body = JSON.parse(event.body || '{}');
+      console.log('[webhook] POST received — object:', body.object, '| entries:', body.entry?.length);
       const entry = body.entry?.[0];
 
       // ── Route Instagram and Facebook Messenger events ─────────────────────
