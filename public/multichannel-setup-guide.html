@@ -1,0 +1,591 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Multi-Channel Setup Guide — Instagram & Facebook Messenger</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --navy:   #0D1B3E;
+      --gold:   #C5A041;
+      --ig:     #C13584;
+      --fb:     #1877F2;
+      --wa:     #25D366;
+      --green:  #059669;
+      --red:    #DC2626;
+      --warn:   #D97706;
+      --bg:     #F0F2F5;
+      --card:   #FFFFFF;
+      --border: #E5E7EB;
+      --text:   #111827;
+      --muted:  #6B7280;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      padding: 32px 16px 64px;
+    }
+
+    .page-wrap { max-width: 860px; margin: 0 auto; }
+
+    /* ── Header ── */
+    .page-header {
+      background: var(--navy);
+      color: #fff;
+      border-radius: 14px;
+      padding: 32px 36px;
+      margin-bottom: 32px;
+    }
+    .page-header h1 { font-size: 26px; font-weight: 700; margin-bottom: 8px; }
+    .page-header p  { font-size: 14px; color: rgba(255,255,255,.7); max-width: 560px; }
+    .channel-pills  { display: flex; gap: 8px; margin-top: 18px; flex-wrap: wrap; }
+    .ch-pill { padding: 4px 14px; border-radius: 20px; font-size: 12px; font-weight: 700; }
+    .ch-pill.wa { background: var(--wa); color: #fff; }
+    .ch-pill.ig { background: var(--ig); color: #fff; }
+    .ch-pill.fb { background: var(--fb); color: #fff; }
+
+    /* ── Section ── */
+    .section { margin-bottom: 28px; }
+    .section-title {
+      font-size: 13px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .8px;
+      color: var(--muted);
+      margin-bottom: 12px;
+      padding-left: 4px;
+    }
+
+    /* ── Card ── */
+    .card {
+      background: var(--card);
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      overflow: hidden;
+      margin-bottom: 14px;
+    }
+    .card-header {
+      padding: 16px 20px 14px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .step-badge {
+      width: 28px; height: 28px;
+      border-radius: 50%;
+      background: var(--navy);
+      color: #fff;
+      font-size: 13px;
+      font-weight: 700;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+    }
+    .step-badge.ig { background: var(--ig); }
+    .step-badge.fb { background: var(--fb); }
+    .step-badge.db { background: var(--green); }
+    .card-title { font-size: 15px; font-weight: 700; flex: 1; }
+    .card-channel {
+      font-size: 11px; font-weight: 700;
+      padding: 2px 8px; border-radius: 8px;
+    }
+    .card-channel.ig { background: #FCE7F3; color: var(--ig); }
+    .card-channel.fb { background: #DBEAFE; color: var(--fb); }
+    .card-channel.both { background: #EDE9FE; color: #5B21B6; }
+    .card-channel.db   { background: #DCFCE7; color: var(--green); }
+
+    .card-body { padding: 18px 20px; }
+
+    /* ── Steps list ── */
+    ol.steps { list-style: none; counter-reset: step; }
+    ol.steps li {
+      counter-increment: step;
+      padding: 10px 0 10px 36px;
+      position: relative;
+      border-bottom: 1px solid #F3F4F6;
+      font-size: 14px;
+    }
+    ol.steps li:last-child { border-bottom: none; padding-bottom: 0; }
+    ol.steps li::before {
+      content: counter(step);
+      position: absolute; left: 0; top: 12px;
+      width: 22px; height: 22px;
+      background: #F3F4F6;
+      border-radius: 50%;
+      font-size: 11px; font-weight: 700; color: var(--muted);
+      display: flex; align-items: center; justify-content: center;
+    }
+    ol.steps li strong { color: var(--text); }
+    ol.steps li .sub {
+      font-size: 13px; color: var(--muted);
+      margin-top: 4px;
+    }
+
+    /* ── Code blocks ── */
+    code {
+      background: #F3F4F6;
+      border-radius: 4px;
+      padding: 1px 6px;
+      font-size: 12px;
+      font-family: 'Menlo', 'Consolas', monospace;
+      color: #374151;
+    }
+    pre {
+      background: #1E293B;
+      color: #E2E8F0;
+      border-radius: 8px;
+      padding: 14px 16px;
+      font-size: 12px;
+      font-family: 'Menlo', 'Consolas', monospace;
+      overflow-x: auto;
+      margin-top: 10px;
+      line-height: 1.6;
+    }
+    pre .comment { color: #94A3B8; }
+    pre .key     { color: #7DD3FC; }
+    pre .val     { color: #86EFAC; }
+
+    /* ── Callout boxes ── */
+    .callout {
+      border-radius: 8px;
+      padding: 12px 14px;
+      font-size: 13px;
+      margin-top: 12px;
+      display: flex;
+      gap: 10px;
+      align-items: flex-start;
+      line-height: 1.5;
+    }
+    .callout-icon { font-size: 16px; flex-shrink: 0; margin-top: 1px; }
+    .callout.warn  { background: #FFFBEB; border: 1px solid #FCD34D; color: #92400E; }
+    .callout.info  { background: #EFF6FF; border: 1px solid #BFDBFE; color: #1D4ED8; }
+    .callout.tip   { background: #F0FDF4; border: 1px solid #BBF7D0; color: #166534; }
+    .callout.error { background: #FEF2F2; border: 1px solid #FECACA; color: #991B1B; }
+
+    /* ── Permission table ── */
+    table.perms { width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 10px; }
+    table.perms th { background: #F9FAFB; padding: 8px 10px; border: 1px solid var(--border); text-align: left; font-weight: 700; color: var(--muted); }
+    table.perms td { padding: 7px 10px; border: 1px solid var(--border); }
+    table.perms td.yes { color: var(--green); font-weight: 700; }
+    table.perms td.no  { color: var(--muted); }
+
+    /* ── Nav ── */
+    .toc {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 18px 20px;
+      margin-bottom: 28px;
+    }
+    .toc h3 { font-size: 13px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .6px; margin-bottom: 10px; }
+    .toc ol { padding-left: 18px; font-size: 14px; }
+    .toc ol li { padding: 3px 0; }
+    .toc a { color: var(--navy); text-decoration: none; }
+    .toc a:hover { text-decoration: underline; }
+
+    /* ── Footer ── */
+    .footer { text-align: center; color: var(--muted); font-size: 12px; margin-top: 40px; }
+
+    @media (max-width: 600px) {
+      .page-header { padding: 20px; }
+      .page-header h1 { font-size: 20px; }
+      .card-body { padding: 14px 16px; }
+    }
+  </style>
+</head>
+<body>
+<div class="page-wrap">
+
+  <!-- Header -->
+  <div class="page-header">
+    <h1>Multi-Channel Inbox Setup</h1>
+    <p>Step-by-step guide to add Instagram DMs and Facebook Messenger to your AI agent dashboard. Follows the exact configuration that works in production.</p>
+    <div class="channel-pills">
+      <span class="ch-pill wa">📱 WhatsApp (existing)</span>
+      <span class="ch-pill ig">📸 Instagram DMs</span>
+      <span class="ch-pill fb">🔵 Facebook Messenger</span>
+    </div>
+  </div>
+
+  <!-- TOC -->
+  <div class="toc">
+    <h3>Contents</h3>
+    <ol>
+      <li><a href="#s1">Run database migration</a></li>
+      <li><a href="#s2">Create a System User in Meta Business Suite</a></li>
+      <li><a href="#s3">Assign assets to the System User</a></li>
+      <li><a href="#s4">Generate the System User token</a></li>
+      <li><a href="#s5">Find your Instagram Business Account ID</a></li>
+      <li><a href="#s6">Find your Facebook Page IDs</a></li>
+      <li><a href="#s7">Update Supabase businesses table</a></li>
+      <li><a href="#s8">Subscribe Instagram to the webhook</a></li>
+      <li><a href="#s9">Subscribe Facebook Pages to the webhook</a></li>
+      <li><a href="#s10">Test and verify</a></li>
+    </ol>
+  </div>
+
+  <!-- STEP 1 -->
+  <div class="section" id="s1">
+    <div class="section-title">Phase 1 — Database</div>
+    <div class="card">
+      <div class="card-header">
+        <div class="step-badge db">1</div>
+        <div class="card-title">Run the database migration</div>
+        <span class="card-channel db">Supabase SQL</span>
+      </div>
+      <div class="card-body">
+        <p style="font-size:14px;margin-bottom:12px">Run this SQL in <strong>Supabase → SQL Editor</strong>. It adds the channel columns and makes <code>phone</code> nullable so Instagram/Facebook contacts (who have no phone number) can be stored.</p>
+        <pre><span class="comment">-- Allow phone to be NULL for Instagram/Facebook contacts</span>
+ALTER TABLE contacts ALTER COLUMN phone DROP NOT NULL;
+
+<span class="comment">-- Store Instagram/Facebook sender PSIDs</span>
+ALTER TABLE contacts
+  ADD COLUMN IF NOT EXISTS channel_user_id TEXT;
+
+CREATE INDEX IF NOT EXISTS contacts_channel_user_id_business_idx
+  ON contacts (channel_user_id, business_id);
+
+<span class="comment">-- Tag every conversation and message with its channel</span>
+ALTER TABLE conversations
+  ADD COLUMN IF NOT EXISTS channel TEXT NOT NULL DEFAULT 'whatsapp'
+  CHECK (channel IN ('whatsapp', 'instagram', 'facebook'));
+
+ALTER TABLE messages
+  ADD COLUMN IF NOT EXISTS channel TEXT NOT NULL DEFAULT 'whatsapp'
+  CHECK (channel IN ('whatsapp', 'instagram', 'facebook'));
+
+<span class="comment">-- Add IG/FB identifiers to businesses</span>
+ALTER TABLE businesses
+  ADD COLUMN IF NOT EXISTS ig_account_id TEXT,
+  ADD COLUMN IF NOT EXISTS fb_page_id    TEXT,
+  ADD COLUMN IF NOT EXISTS fb_page_token TEXT;</pre>
+        <div class="callout warn">
+          <span class="callout-icon">⚠️</span>
+          <div>Run this migration <strong>before</strong> testing any Instagram or Facebook messages. The <code>phone DROP NOT NULL</code> line is critical — without it, creating Instagram contacts will fail silently.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 2 -->
+  <div class="section" id="s2">
+    <div class="section-title">Phase 2 — Meta Business Suite</div>
+    <div class="card">
+      <div class="card-header">
+        <div class="step-badge">2</div>
+        <div class="card-title">Create a System User</div>
+        <span class="card-channel both">IG + FB</span>
+      </div>
+      <div class="card-body">
+        <p style="font-size:14px;margin-bottom:12px">A System User generates a <strong>permanent token</strong> that never expires and isn't tied to any personal Facebook account. One System User covers all businesses and all channels.</p>
+        <ol class="steps">
+          <li>Go to <strong>business.facebook.com → Settings (gear icon) → Users → System Users</strong></li>
+          <li>Click <strong>Add</strong> → enter a name (e.g. <code>whatsapp-agent-bot</code>) → Role: <strong>Admin</strong></li>
+          <li>Click <strong>Create System User</strong></li>
+        </ol>
+        <div class="callout info">
+          <span class="callout-icon">ℹ️</span>
+          <div>Use <strong>Admin</strong> role, not Employee. Employee role cannot generate tokens with the permissions needed for messaging APIs.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 3 -->
+    <div class="card">
+      <div class="card-header">
+        <div class="step-badge">3</div>
+        <div class="card-title">Assign assets to the System User</div>
+        <span class="card-channel both">IG + FB</span>
+      </div>
+      <div class="card-body">
+        <p style="font-size:14px;margin-bottom:12px">Click <strong>Add Assets</strong> on the System User. You must assign all three asset types or the token will not have access.</p>
+        <ol class="steps">
+          <li>
+            <strong>Apps</strong> — select your Meta App → give <strong>Full Control</strong>
+            <div class="sub">This is the same Meta App that handles your WhatsApp webhook.</div>
+          </li>
+          <li>
+            <strong>Pages</strong> — select each Facebook Page → give <strong>Full Control</strong>
+            <div class="sub">Missing this step causes <code>#200 Requires pages_manage_metadata</code> errors when subscribing Pages to the webhook.</div>
+          </li>
+          <li>
+            <strong>Instagram accounts</strong> — select each Instagram Business Account → give <strong>Full Control</strong>
+          </li>
+        </ol>
+        <div class="callout error">
+          <span class="callout-icon">🚫</span>
+          <div><strong>If you skip assigning Pages</strong>, <code>/me/accounts</code> returns an empty array and you cannot subscribe the Pages to the webhook. You must assign Pages explicitly.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 4 -->
+    <div class="card">
+      <div class="card-header">
+        <div class="step-badge">4</div>
+        <div class="card-title">Generate the System User token</div>
+        <span class="card-channel both">IG + FB</span>
+      </div>
+      <div class="card-body">
+        <p style="font-size:14px;margin-bottom:12px">Click <strong>Generate New Token</strong> on the System User. Select your Meta App and tick all of these permissions:</p>
+        <table class="perms">
+          <thead>
+            <tr><th>Permission</th><th>Required for</th></tr>
+          </thead>
+          <tbody>
+            <tr><td><code>pages_manage_metadata</code></td><td>Subscribing Pages to the webhook</td></tr>
+            <tr><td><code>pages_messaging</code></td><td>Sending/receiving Facebook Messenger messages</td></tr>
+            <tr><td><code>instagram_basic</code></td><td>Instagram account access</td></tr>
+            <tr><td><code>instagram_manage_messages</code></td><td>Sending/receiving Instagram DMs</td></tr>
+            <tr><td><code>whatsapp_business_messaging</code></td><td>WhatsApp (if shown)</td></tr>
+            <tr><td><code>public_profile</code></td><td>Reading sender names</td></tr>
+          </tbody>
+        </table>
+        <div class="callout warn" style="margin-top:12px">
+          <span class="callout-icon">⚠️</span>
+          <div>Copy the token immediately — it is only shown once. This is your <strong>permanent System User token</strong> and will be stored in Supabase as <code>access_token</code> for both businesses.</div>
+        </div>
+        <div class="callout tip">
+          <span class="callout-icon">✅</span>
+          <div>Verify it in <strong>developers.facebook.com → Tools → Access Token Debugger</strong>. The <code>Expires</code> field should say <strong>Never</strong>.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 5 -->
+  <div class="section" id="s5">
+    <div class="section-title">Phase 3 — Find your IDs</div>
+    <div class="card">
+      <div class="card-header">
+        <div class="step-badge ig">5</div>
+        <div class="card-title">Find your Instagram Business Account ID</div>
+        <span class="card-channel ig">Instagram</span>
+      </div>
+      <div class="card-body">
+        <p style="font-size:14px;margin-bottom:12px">The Instagram Business Account ID is <strong>not</strong> the numeric ID visible in the Instagram app URL. It is the ID of the Instagram account linked to your Facebook Page, obtained via the Graph API.</p>
+        <p style="font-size:13px;color:var(--muted);margin-bottom:8px">Open this URL in your browser (replace values, no curly braces):</p>
+        <pre>https://graph.facebook.com/v19.0/<span class="key">{YOUR_FB_PAGE_ID}</span>?fields=instagram_business_account&access_token=<span class="val">{SYSTEM_USER_TOKEN}</span></pre>
+        <p style="font-size:13px;margin-top:10px">Response:</p>
+        <pre>{
+  "instagram_business_account": {
+    "id": <span class="val">"17841404274639707"</span>   <span class="comment">← this is your ig_account_id</span>
+  },
+  "id": <span class="val">"123456789"</span>
+}</pre>
+        <p style="font-size:13px;color:var(--muted);margin-top:10px">Do this for each Facebook Page to get the <code>ig_account_id</code> for each business.</p>
+      </div>
+    </div>
+
+    <!-- STEP 6 -->
+    <div class="card">
+      <div class="card-header">
+        <div class="step-badge fb">6</div>
+        <div class="card-title">Find your Facebook Page IDs</div>
+        <span class="card-channel fb">Facebook</span>
+      </div>
+      <div class="card-body">
+        <ol class="steps">
+          <li>Go to your Facebook Page</li>
+          <li>Click <strong>About</strong> in the left menu</li>
+          <li>Scroll to the bottom → <strong>Page ID</strong> is shown as a number</li>
+        </ol>
+        <p style="font-size:13px;color:var(--muted);margin-top:10px">Alternatively, check the URL when editing the Page — the numeric ID appears in the path.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 7 -->
+  <div class="section" id="s7">
+    <div class="section-title">Phase 4 — Supabase configuration</div>
+    <div class="card">
+      <div class="card-header">
+        <div class="step-badge db">7</div>
+        <div class="card-title">Update Supabase businesses table</div>
+        <span class="card-channel db">Supabase SQL</span>
+      </div>
+      <div class="card-body">
+        <p style="font-size:14px;margin-bottom:12px">Run in <strong>Supabase → SQL Editor</strong>. Replace each value with your actual IDs and token. Both businesses use the <strong>same System User token</strong>.</p>
+        <pre><span class="comment">-- Business 1 (replace name, IDs, and token)</span>
+UPDATE businesses
+SET
+  access_token  = <span class="val">'SYSTEM_USER_TOKEN'</span>,
+  ig_account_id = <span class="val">'17841404274639707'</span>,
+  fb_page_id    = <span class="val">'123456789'</span>
+WHERE name = <span class="val">'LegalAid AI'</span>;
+
+<span class="comment">-- Business 2</span>
+UPDATE businesses
+SET
+  access_token  = <span class="val">'SYSTEM_USER_TOKEN'</span>,
+  ig_account_id = <span class="val">'17841442470814607'</span>,
+  fb_page_id    = <span class="val">'987654321'</span>
+WHERE name = <span class="val">'Garment Retail'</span>;</pre>
+        <div class="callout info">
+          <span class="callout-icon">ℹ️</span>
+          <div>Leave <code>fb_page_token</code> as <strong>NULL</strong>. The system falls back to <code>access_token</code> for sending Facebook replies, which works correctly with the System User token.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 8 -->
+  <div class="section" id="s8">
+    <div class="section-title">Phase 5 — Webhook subscriptions</div>
+    <div class="card">
+      <div class="card-header">
+        <div class="step-badge ig">8</div>
+        <div class="card-title">Subscribe Instagram to the webhook</div>
+        <span class="card-channel ig">Instagram</span>
+      </div>
+      <div class="card-body">
+        <ol class="steps">
+          <li>
+            Go to <strong>developers.facebook.com → your Meta App → Instagram product → Webhooks</strong>
+          </li>
+          <li>
+            Click <strong>Add Callback URL</strong>
+            <div class="sub">Use the <strong>same webhook URL and verify token</strong> as your WhatsApp setup. No new URL needed.</div>
+          </li>
+          <li>
+            Under <strong>Webhook Fields</strong>, tick <strong><code>messages</code></strong> → click Subscribe
+          </li>
+          <li>
+            Under <strong>Instagram Accounts</strong>, connect both Instagram accounts
+          </li>
+        </ol>
+        <div class="callout tip">
+          <span class="callout-icon">✅</span>
+          <div>Your webhook verify token is stored in Netlify → Site configuration → Environment variables as <code>WEBHOOK_VERIFY_TOKEN</code>.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 9 -->
+    <div class="card">
+      <div class="card-header">
+        <div class="step-badge fb">9</div>
+        <div class="card-title">Subscribe Facebook Pages to the webhook</div>
+        <span class="card-channel fb">Facebook</span>
+      </div>
+      <div class="card-body">
+        <p style="font-size:14px;margin-bottom:12px">Facebook Messenger requires each Page to be individually subscribed to receive webhook events. This is the most commonly missed step.</p>
+        <ol class="steps">
+          <li>
+            Go to <strong>Meta App → Messenger product → Settings</strong>
+          </li>
+          <li>
+            Under <strong>Webhooks</strong>, add the same callback URL and verify token if not already set → subscribe to the <strong><code>messages</code></strong> field
+          </li>
+          <li>
+            Under <strong>Access Tokens</strong>, click <strong>Add or Remove Pages</strong> → connect both Facebook Pages
+          </li>
+          <li>
+            For each connected Page, click <strong>Edit Page Subscriptions</strong> → tick <strong><code>messages</code></strong> → Save
+          </li>
+        </ol>
+        <div class="callout error">
+          <span class="callout-icon">🚫</span>
+          <div><strong>Do not</strong> generate a Page Access Token from the Messenger Access Tokens section and store it in <code>fb_page_token</code>. Tokens generated there are short-lived and will break message sending when they expire. Leave <code>fb_page_token</code> as NULL.</div>
+        </div>
+        <div class="callout warn">
+          <span class="callout-icon">⚠️</span>
+          <div>If you regenerate a token in the Messenger Access Tokens section, it can disconnect the Page webhook subscription. If Messenger stops working, return here and re-tick the <code>messages</code> checkbox in Edit Page Subscriptions.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 10 -->
+  <div class="section" id="s10">
+    <div class="section-title">Phase 6 — Verify</div>
+    <div class="card">
+      <div class="card-header">
+        <div class="step-badge">10</div>
+        <div class="card-title">Test and verify all channels</div>
+        <span class="card-channel both">IG + FB</span>
+      </div>
+      <div class="card-body">
+        <ol class="steps">
+          <li>
+            <strong>Instagram test</strong> — send a DM to each Instagram Business Account from a personal account
+            <div class="sub">Expected: Netlify logs show <code>[webhook/instagram] matched business: ...</code> and the conversation appears in the dashboard with a 📸 IG badge.</div>
+          </li>
+          <li>
+            <strong>Facebook test</strong> — send a message to each Facebook Page via Messenger
+            <div class="sub">Expected: Netlify logs show <code>[webhook] POST received — object: page</code> and <code>[webhook/facebook] matched business: ...</code>.</div>
+          </li>
+          <li>
+            <strong>Verify contact names</strong> — the first message creates a contact with the PSID as the name. The second message from the same account will self-heal to the real username/name.
+            <div class="sub">Or update manually in Supabase: <code>UPDATE contacts SET name = 'real_name' WHERE channel_user_id = 'psid';</code></div>
+          </li>
+          <li>
+            <strong>Verify AI replies</strong> — the AI should auto-reply based on the business's <code>ai_auto_threshold</code> setting (same logic as WhatsApp).
+          </li>
+        </ol>
+
+        <div style="margin-top:16px;padding-top:16px;border-top:1px solid var(--border)">
+          <p style="font-size:13px;font-weight:700;margin-bottom:10px">Nothing appears in Netlify logs for Facebook?</p>
+          <ol class="steps">
+            <li>The Meta App must be in <strong>Live mode</strong> (not Development) for messages from the public to trigger webhooks</li>
+            <li>Verify the Page is subscribed: open <code>https://graph.facebook.com/v19.0/{PAGE_ID}/subscribed_apps?access_token={TOKEN}</code> — it should return your app name, not an empty array</li>
+            <li>Re-do Step 9 — re-tick the <code>messages</code> checkbox in Edit Page Subscriptions</li>
+          </ol>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Quick reference -->
+  <div class="section">
+    <div class="section-title">Quick Reference — What goes where</div>
+    <div class="card">
+      <div class="card-body">
+        <table class="perms">
+          <thead>
+            <tr><th>Supabase column</th><th>Value</th><th>How to find it</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>access_token</code></td>
+              <td>System User token (permanent)</td>
+              <td>Meta Business Suite → System Users → Generate Token</td>
+            </tr>
+            <tr>
+              <td><code>ig_account_id</code></td>
+              <td>Instagram Business Account ID</td>
+              <td><code>GET /{fb_page_id}?fields=instagram_business_account</code></td>
+            </tr>
+            <tr>
+              <td><code>fb_page_id</code></td>
+              <td>Facebook Page numeric ID</td>
+              <td>Facebook Page → About → scroll to bottom</td>
+            </tr>
+            <tr>
+              <td><code>fb_page_token</code></td>
+              <td class="no">Leave NULL</td>
+              <td class="no">Not needed — system uses access_token as fallback</td>
+            </tr>
+            <tr>
+              <td><code>phone_number_id</code></td>
+              <td>WhatsApp Phone Number ID</td>
+              <td>Already set — unchanged</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div class="footer">
+    Multi-Channel Setup Guide · LawAid AI Agent Platform · Last updated June 2026
+  </div>
+
+</div>
+</body>
+</html>
