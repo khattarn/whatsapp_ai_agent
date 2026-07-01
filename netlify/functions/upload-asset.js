@@ -51,13 +51,13 @@ exports.handler = async (event) => {
     return { statusCode: 200, headers: HEADERS, body: JSON.stringify({ assets }) };
   }
 
-  // ── POST: upload a file ───────────────────────────────────────────────────
+  // ── POST: generate a signed upload URL (client uploads directly to Supabase) ─
   if (event.httpMethod === 'POST') {
     try {
-      const { businessId, fileName, fileType, fileData } = JSON.parse(event.body || '{}');
+      const { businessId, fileName, fileType } = JSON.parse(event.body || '{}');
 
-      if (!businessId || !fileName || !fileType || !fileData) {
-        return { statusCode: 400, headers: HEADERS, body: JSON.stringify({ error: 'businessId, fileName, fileType, and fileData (base64) are required' }) };
+      if (!businessId || !fileName || !fileType) {
+        return { statusCode: 400, headers: HEADERS, body: JSON.stringify({ error: 'businessId, fileName, and fileType are required' }) };
       }
 
       // Sanitize filename: lowercase, alphanumeric + dash/underscore/dot only
@@ -65,18 +65,12 @@ exports.handler = async (event) => {
       const ts = Date.now();
       const path = `${businessId}/${ts}-${safe}`;
 
-      const buffer = Buffer.from(fileData, 'base64');
-
-      const { error } = await supabase.storage.from(BUCKET).upload(path, buffer, {
-        contentType: fileType,
-        upsert: false,
-      });
-
+      const { data, error } = await supabase.storage.from(BUCKET).createSignedUploadUrl(path);
       if (error) return { statusCode: 500, headers: HEADERS, body: JSON.stringify({ error: error.message }) };
 
       const { data: { publicUrl } } = supabase.storage.from(BUCKET).getPublicUrl(path);
 
-      return { statusCode: 200, headers: HEADERS, body: JSON.stringify({ success: true, url: publicUrl, path }) };
+      return { statusCode: 200, headers: HEADERS, body: JSON.stringify({ signedUrl: data.signedUrl, path, publicUrl }) };
     } catch (err) {
       console.error('[upload-asset] POST error:', err);
       return { statusCode: 500, headers: HEADERS, body: JSON.stringify({ error: err.message }) };
