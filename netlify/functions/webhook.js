@@ -178,10 +178,14 @@ async function upsertContact({ phone, channelUserId, name: displayName }, busine
   if (existing) {
     const updatePayload = { last_seen: new Date().toISOString() };
     if (phone && !existing.phone) updatePayload.phone = phone;
-    // Self-heal: if name is still the raw phone number, resolve from advocates
+    // Self-heal: if name is still the raw phone number, prefer WA profile name or advocate lookup
     if (phone && existing.name === phone) {
-      const advName = await resolveAdvocateName(phone);
-      if (advName) { updatePayload.name = advName; existing.name = advName; }
+      if (displayName) {
+        updatePayload.name = displayName;
+      } else {
+        const advName = await resolveAdvocateName(phone);
+        if (advName) { updatePayload.name = advName; existing.name = advName; }
+      }
     }
     // Self-heal: if name is still the PSID, update to real display name
     if (channelUserId && displayName && existing.name === channelUserId) {
@@ -774,6 +778,7 @@ exports.handler = async (event) => {
       const text      = message.text?.body || null;
       const mediaUrl  = message.image?.id || message.document?.id || null;
       const ts        = new Date(parseInt(message.timestamp || Date.now() / 1000) * 1000).toISOString();
+      const waProfileName = value.contacts?.[0]?.profile?.name || null;
 
       // Find the business this phone number belongs to
       const { data: business } = await supabase
@@ -785,7 +790,7 @@ exports.handler = async (event) => {
       if (!business) return { statusCode: 200, body: 'OK' };
 
       // Upsert contact & conversation
-      const contact = await upsertContact({ phone: fromPhone }, business.id);
+      const contact = await upsertContact({ phone: fromPhone, name: waProfileName }, business.id);
       const conversation = await upsertConversation(contact.id, business.id, 'whatsapp');
 
       // Store the inbound message
