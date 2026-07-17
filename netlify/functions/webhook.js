@@ -257,6 +257,155 @@ function languagePrompt() {
   return '🌐 *Choose your language / भाषा चुनें / भाषा निवडा*\n\n1️⃣ English\n2️⃣ हिंदी (Hindi)\n3️⃣ मराठी (Marathi)\n\nReply 1, 2, or 3.';
 }
 
+// ── Legal Aid: bilingual (English + Hindi) static replies ──────────────────
+// Many unregistered users write in Hinglish before any language is selected,
+// so the pre-registration flow always shows English followed by Hindi.
+function bl(en, hi) {
+  return `${en}\n\n----------\n\n${hi}`;
+}
+
+const UNREGISTERED_WELCOME_TEXT = bl(
+  `👋 Welcome to *LegalAid AI — Nyaya Saathi!* ⚖️\n\n` +
+  `India's AI-powered legal assistant for advocates and citizens.\n\n` +
+  `I can help you with:\n` +
+  `• Instant answers on Indian law\n` +
+  `• Case law research\n` +
+  `• Document drafting\n\n` +
+  `*Choose an option:*\n\n` +
+  `1️⃣ Ask a Legal Question (free, instant)\n` +
+  `2️⃣ Get Full App Access (free beta)\n` +
+  `3️⃣ Talk to Our Team\n\n` +
+  `Reply with 1, 2, or 3.`,
+  `👋 *LegalAid AI — न्याय साथी* में आपका स्वागत है! ⚖️\n\n` +
+  `अधिवक्ताओं और नागरिकों के लिए भारत का AI-संचालित कानूनी सहायक।\n\n` +
+  `मैं आपकी इनमें मदद कर सकता हूँ:\n` +
+  `• भारतीय कानून पर तुरंत जवाब\n` +
+  `• केस लॉ रिसर्च\n` +
+  `• दस्तावेज़ ड्राफ्टिंग\n\n` +
+  `*एक विकल्प चुनें:*\n\n` +
+  `1️⃣ कानूनी प्रश्न पूछें (मुफ़्त, तुरंत)\n` +
+  `2️⃣ पूरा ऐप एक्सेस पाएं (मुफ़्त बीटा)\n` +
+  `3️⃣ हमारी टीम से बात करें\n\n` +
+  `1, 2, या 3 लिखकर जवाब दें।`
+);
+
+const UNREGISTERED_MENU_SHORT_TEXT = bl(
+  `⚖️ *LegalAid AI — Nyaya Saathi*\n\n1️⃣ Ask a Legal Question (free)\n2️⃣ Get Full App Access\n3️⃣ Talk to Our Team\n\nReply with 1, 2, or 3.`,
+  `⚖️ *LegalAid AI — न्याय साथी*\n\n1️⃣ कानूनी प्रश्न पूछें (मुफ़्त)\n2️⃣ पूरा ऐप एक्सेस पाएं\n3️⃣ हमारी टीम से बात करें\n\n1, 2, या 3 लिखकर जवाब दें।`
+);
+
+const UNREGISTERED_MENU_INVALID_TEXT = bl(
+  `Please reply with:\n\n1️⃣ Ask a Legal Question\n2️⃣ Get Full App Access\n3️⃣ Talk to Our Team`,
+  `कृपया इनमें से एक जवाब दें:\n\n1️⃣ कानूनी प्रश्न पूछें\n2️⃣ पूरा ऐप एक्सेस पाएं\n3️⃣ हमारी टीम से बात करें`
+);
+
+function unregisteredOption1Text(appUrl) {
+  return bl(
+    `Sure! Type your legal question and I'll give you an instant answer.\n\n` +
+    `For full research with case citations and document drafting, get free access at:\n${appUrl}`,
+    `ज़रूर! अपना कानूनी प्रश्न टाइप करें और मैं आपको तुरंत जवाब दूँगा।\n\n` +
+    `केस साइटेशन के साथ पूरी रिसर्च और दस्तावेज़ ड्राफ्टिंग के लिए मुफ़्त एक्सेस पाएं:\n${appUrl}`
+  );
+}
+
+function unregisteredOption2Text(appUrl) {
+  return bl(
+    `Get free beta access in 2 minutes:\n\n👉 ${appUrl}\n\n` +
+    `After signing up, save your WhatsApp number in Settings to enable this chatbot for your account. ✅`,
+    `सिर्फ़ 2 मिनट में मुफ़्त बीटा एक्सेस पाएं:\n\n👉 ${appUrl}\n\n` +
+    `साइन अप करने के बाद, इस चैटबॉट को अपने अकाउंट के लिए चालू करने हेतु सेटिंग्स में अपना WhatsApp नंबर सेव करें। ✅`
+  );
+}
+
+const UNREGISTERED_OPTION3_TEXT = bl(
+  `Happy to help! Our team will reach out to you shortly. 🙏\n\n` +
+  `You can also email us: info@legalaidai.in\nWebsite: ${LEGAL_AID_APP_URL}`,
+  `मदद करके खुशी होगी! हमारी टीम जल्द ही आपसे संपर्क करेगी। 🙏\n\n` +
+  `आप हमें ईमेल भी कर सकते हैं: info@legalaidai.in\nवेबसाइट: ${LEGAL_AID_APP_URL}`
+);
+
+const UNREGISTERED_QUERY_FOLLOWUP_TEXT = bl(
+  `For full legal research with case citations and document drafting, get free access at:\n${LEGAL_AID_APP_URL}/advocate\n\n` +
+  `Ask another question, or type *menu* to go back.`,
+  `केस साइटेशन सहित पूरी कानूनी रिसर्च और दस्तावेज़ ड्राफ्टिंग के लिए मुफ़्त एक्सेस पाएं:\n${LEGAL_AID_APP_URL}/advocate\n\n` +
+  `एक और सवाल पूछें, या वापस जाने के लिए *menu* टाइप करें।`
+);
+
+const RESEARCHING_TEXT = '⚖️ Researching… / खोज कर रहे हैं…';
+
+// ── Legal Aid: pricing knowledge for AI-answered questions ─────────────────
+const LEGAL_AID_PRICING_INFO = `
+LegalAid AI (Nyaya Saathi) pricing across all products:
+
+CITIZEN — Nyaya Saathi:
+- Free: ₹0, 5 AI queries included
+- Premium Monthly: ₹999, ₹499/month with code LAI50 (50% off)
+- Premium Yearly: ₹4,999/year
+- AI Document Enhancement: ₹499 for 1 credit, or ₹999 for 3 credits (free with Premium)
+
+ADVOCATE — Nyaya Saathi Pro:
+- 48-Hour Trial: Free (admin-approved), 50 queries
+- Month 1: ₹2,950 (₹2,500 + 18% GST), 200 queries
+- Month 2 onward: ₹5,900/month (₹5,000 + 18% GST), 300 queries
+
+CORPORATE — Nyaya Saathi Corporate:
+- 7-Day Trial: Free (admin-approved, requires CO- invite code)
+- Month 1: ₹2,950 (₹2,500 + 18% GST), 200 queries
+- Monthly thereafter: ₹5,900/month (₹5,000 + 18% GST), 300 queries
+
+QUICK LEGAL DRAFT (pay-per-use, no subscription needed):
+- Vakalatnama and Simple Affidavit: free, up to 10 each per month
+- First paid draft: ₹1,000 (GST-inclusive)
+- Every draft after that: ₹500 (GST-inclusive)
+- 75 templates available (73 paid, including Power of Attorney and Partnership Deed)
+`.trim();
+
+function legalAidSystemPrompt(lang, bilingual = false) {
+  const langName = { en: 'English', hi: 'Hindi', mr: 'Marathi' }[lang] || 'English';
+  const base = `You are Nyaya Saathi, an AI legal assistant for Indian law, part of the LegalAid AI platform.
+
+Answer legal questions concisely and accurately, citing relevant Indian statutes or landmark cases where helpful.
+
+If the user asks about the cost, price, plans, or subscription of LegalAid AI itself (not legal fees or court costs), answer using this pricing information and nothing else:
+${LEGAL_AID_PRICING_INFO}`;
+
+  if (bilingual) {
+    return `${base}
+
+Write your answer in English first. Then add a line of ten hyphens (----------) on its own, and below it write the same answer translated into Hindi (Devanagari script). Keep each version under 250 words, plain text (no markdown).`;
+  }
+
+  return `${base}
+
+Reply in ${langName}. Keep the response under 350 words, plain text (no markdown).`;
+}
+
+// Heuristic: does the message look like an actual question worth answering with AI,
+// as opposed to a bare greeting or menu digit typed with no other context?
+function isSubstantiveMessage(text) {
+  const t = (text || '').trim();
+  if (t.length < 4) return false;
+  if (/^[\d\s.,]+$/.test(t)) return false;
+  const GREETING_ONLY = /^(hi+|hello+|hey+|helo|namaste|namaskar|menu|start|good\s?(morning|afternoon|evening))[.!?]*$/i;
+  if (GREETING_ONLY.test(t)) return false;
+  return true;
+}
+
+async function answerLegalAidQuestion(text, lang, { bilingual = false } = {}) {
+  try {
+    const aiRes = await anthropic.messages.create({
+      model: 'claude-haiku-4-5-20251001',
+      max_tokens: bilingual ? 800 : 400,
+      system: legalAidSystemPrompt(lang, bilingual),
+      messages: [{ role: 'user', content: text || '' }],
+    });
+    return aiRes.content[0]?.text || null;
+  } catch (e) {
+    console.error('[answerLegalAidQuestion] error:', e.message);
+    return null;
+  }
+}
+
 function buildMenu(lang, name, userType) {
   const greet = { en: `Hello ${name}! 👋`, hi: `नमस्ते ${name}! 👋`, mr: `नमस्कार ${name}! 👋` }[lang] || `Hello ${name}! 👋`;
   if (userType === 'advocate') {
@@ -306,7 +455,7 @@ async function handleLegalAid(business, _contact, conversation, text, fromPhone,
   if (['menu', 'मेनू', 'मेनु'].includes(tLow) && state !== 'lang_select') {
     if (!uid) {
       await setSession({ state: 'unregistered_menu' });
-      await reply(`⚖️ *LegalAid AI — Nyaya Saathi*\n\n1️⃣ Ask a Legal Question (free)\n2️⃣ Get Full App Access\n3️⃣ Talk to Our Team\n\nReply with 1, 2, or 3.`);
+      await reply(UNREGISTERED_MENU_SHORT_TEXT);
       return;
     }
     await setSession({ state: 'menu', user_type: userType });
@@ -319,23 +468,18 @@ async function handleLegalAid(business, _contact, conversation, text, fromPhone,
     const sub = await callGateway('verify-subscriber', { phone: fromPhone });
     if (!sub.registered) {
       await setSession({ state: 'unregistered_menu' });
-      await reply(
-        `👋 Welcome to *LegalAid AI — Nyaya Saathi!* ⚖️\n\n` +
-        `India's AI-powered legal assistant for advocates and citizens.\n\n` +
-        `I can help you with:\n` +
-        `• Instant answers on Indian law\n` +
-        `• Case law research\n` +
-        `• Document drafting\n\n` +
-        `*Choose an option:*\n\n` +
-        `1️⃣ Ask a Legal Question (free, instant)\n` +
-        `2️⃣ Get Full App Access (free beta)\n` +
-        `3️⃣ Talk to Our Team\n\n` +
-        `Reply with 1, 2, or 3.`
-      );
+      if (isSubstantiveMessage(text)) {
+        const answer = await answerLegalAidQuestion(text, lang, { bilingual: true });
+        if (answer) await reply(answer);
+      }
+      await reply(UNREGISTERED_WELCOME_TEXT);
       return;
     }
     if (!sub.subscribed) {
-      await reply(`Hi ${sub.name || 'there'}! 👋\n\nYour account doesn't have WhatsApp AI access.\nPlease upgrade your plan at: ${LEGAL_AID_APP_URL}`);
+      await reply(bl(
+        `Hi ${sub.name || 'there'}! 👋\n\nYour account doesn't have WhatsApp AI access.\nPlease upgrade your plan at: ${LEGAL_AID_APP_URL}`,
+        `नमस्ते ${sub.name || ''}! 👋\n\nआपके अकाउंट में WhatsApp AI एक्सेस नहीं है।\nकृपया अपना प्लान अपग्रेड करें: ${LEGAL_AID_APP_URL}`
+      ));
       return;
     }
     await setSession({ uid: sub.uid, name: sub.name || 'there', user_type: sub.user_type || 'citizen', state: 'awaiting_lang' });
@@ -440,51 +584,27 @@ async function handleLegalAid(business, _contact, conversation, text, fromPhone,
   if (state === 'unregistered_menu') {
     if (tLow === '1') {
       await setSession({ state: 'unregistered_query' });
-      await reply(
-        `Sure! Type your legal question and I'll give you an instant answer.\n\n` +
-        `For full research with case citations and document drafting, get free access at:\n` +
-        `${LEGAL_AID_APP_URL}/advocate`
-      );
+      await reply(unregisteredOption1Text(`${LEGAL_AID_APP_URL}/advocate`));
     } else if (tLow === '2') {
-      await reply(
-        `Get free beta access in 2 minutes:\n\n` +
-        `👉 ${LEGAL_AID_APP_URL}/advocate\n\n` +
-        `After signing up, save your WhatsApp number in Settings to enable this chatbot for your account. ✅`
-      );
+      await reply(unregisteredOption2Text(`${LEGAL_AID_APP_URL}/advocate`));
     } else if (tLow === '3') {
       await supabase.from('conversations').update({ needs_human: true, ai_enabled: false }).eq('id', conversation.id);
-      await reply(
-        `Happy to help! Our team will reach out to you shortly. 🙏\n\n` +
-        `You can also email us: info@legalaidai.in\n` +
-        `Website: ${LEGAL_AID_APP_URL}`
-      );
+      await reply(UNREGISTERED_OPTION3_TEXT);
     } else {
-      await reply(`Please reply with:\n\n1️⃣ Ask a Legal Question\n2️⃣ Get Full App Access\n3️⃣ Talk to Our Team`);
+      await reply(UNREGISTERED_MENU_INVALID_TEXT);
     }
     return;
   }
 
   // ── Unregistered user free query ────────────────────────────────────────
   if (state === 'unregistered_query') {
-    await reply('⚖️ Researching…');
-    try {
-      const aiRes = await anthropic.messages.create({
-        model: 'claude-haiku-4-5-20251001',
-        max_tokens: 400,
-        system: 'You are Nyaya Saathi, an AI legal assistant for Indian law. Answer the user\'s legal question concisely and accurately. Cite relevant Indian statutes or landmark cases where helpful. Keep the response under 350 words in plain text (no markdown).',
-        messages: [{ role: 'user', content: text || '' }],
-      });
-      const answer = aiRes.content[0]?.text || 'Sorry, I could not generate a response. Please try again.';
-      await reply(answer);
-    } catch (e) {
-      console.error('[handleLegalAid] unregistered query error:', e.message);
-      await reply('Sorry, I could not process your question right now. Please try again.');
-    }
-    await reply(
-      `For full legal research with case citations and document drafting, get free access at:\n` +
-      `${LEGAL_AID_APP_URL}/advocate\n\n` +
-      `Ask another question, or type *menu* to go back.`
-    );
+    await reply(RESEARCHING_TEXT);
+    const answer = await answerLegalAidQuestion(text, lang, { bilingual: true });
+    await reply(answer || bl(
+      'Sorry, I could not process your question right now. Please try again.',
+      'क्षमा करें, अभी आपका प्रश्न संसाधित नहीं हो सका। कृपया पुनः प्रयास करें।'
+    ));
+    await reply(UNREGISTERED_QUERY_FOLLOWUP_TEXT);
     return;
   }
 
