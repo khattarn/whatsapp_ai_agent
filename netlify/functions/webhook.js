@@ -90,8 +90,14 @@ function isSimpleQuery(text) {
   return SIMPLE_PATTERNS.some(p => p.test(text));
 }
 
-// ── Send a WhatsApp text message via the Cloud API ─────────────────────────
-async function sendWhatsAppMessage(accessToken, phoneNumberId, toPhone, text) {
+// ── Send a WhatsApp message via the Cloud API ───────────────────────────────
+// `textOrPayload` is either a plain string (sent as type:text, the original behaviour —
+// every existing call site keeps working unchanged) or a pre-built payload object to
+// merge in as-is (e.g. { type:'interactive', interactive:{...} } for list messages).
+async function sendWhatsAppMessage(accessToken, phoneNumberId, toPhone, textOrPayload) {
+  const extra = typeof textOrPayload === 'string'
+    ? { type: 'text', text: { preview_url: false, body: textOrPayload } }
+    : textOrPayload;
   const res = await fetch(
     `https://graph.facebook.com/v19.0/${phoneNumberId}/messages`,
     {
@@ -104,13 +110,17 @@ async function sendWhatsAppMessage(accessToken, phoneNumberId, toPhone, text) {
         messaging_product: 'whatsapp',
         recipient_type: 'individual',
         to: toPhone,
-        type: 'text',
-        text: { preview_url: false, body: text },
+        ...extra,
       }),
     }
   );
   const data = await res.json();
   return data;
+}
+
+// Builds a WhatsApp List Message payload — one button that opens a row-selection sheet.
+function buildListPayload(bodyText, buttonText, sections) {
+  return { type: 'interactive', interactive: { type: 'list', body: { text: bodyText }, action: { button: buttonText, sections } } };
 }
 
 // ── Send an Instagram DM via the Graph API ─────────────────────────────────
@@ -406,20 +416,83 @@ async function answerLegalAidQuestion(text, lang, { bilingual = false } = {}) {
   }
 }
 
-function buildMenu(lang, name, userType) {
+// ── Bilingual (EN/HI) string table for the interactive menu + guided draft flow ──
+// Marathi ('mr') falls back to English for these strings — new interactive content is
+// EN/HI only for this build; existing plain-text flows keep their separate mr strings.
+const STRINGS = {
+  menu_body:        { en: 'How can I help you today?', hi: 'आज मैं आपकी कैसे मदद करूँ?' },
+  menu_button:       { en: 'View options', hi: 'विकल्प देखें' },
+  row_research_title: { en: '🔍 Legal Research', hi: '🔍 कानूनी शोध' },
+  row_research_desc:  { en: 'Case law, statutes & citations', hi: 'केस लॉ, कानून व उद्धरण' },
+  row_draft_title:    { en: '📝 Draft Document', hi: '📝 दस्तावेज़ ड्राफ्ट' },
+  row_draft_desc:     { en: 'Notice, petition, reply & more', hi: 'नोटिस, याचिका, जवाब आदि' },
+  row_status_title:   { en: '⚖️ eCourts Case Status', hi: '⚖️ eCourts केस स्थिति' },
+  row_status_desc:    { en: 'Check status by CNR number', hi: 'CNR नंबर से स्थिति जानें' },
+  row_help_title:     { en: '🌐 Help & App Links', hi: '🌐 सहायता व ऐप लिंक' },
+  row_help_desc:      { en: 'My Cases, Calendar & support', hi: 'मेरे केस, कैलेंडर व सहायता' },
+  row_mycases_title:  { en: '📁 My Cases (App)', hi: '📁 मेरे केस (ऐप)' },
+  row_mycases_desc:   { en: 'View and manage your cases', hi: 'अपने केस देखें व प्रबंधित करें' },
+  research_prompt:   { en: '⚖️ *Legal Research*\n\nType your legal question.', hi: '⚖️ *कानूनी शोध*\n\nअपना प्रश्न टाइप करें।' },
+  status_prompt:     { en: '📋 *Case Status (eCourts)*\n\nType your CNR number:\nExample: DLHC010123456789', hi: '📋 *केस स्थिति*\n\nCNR नंबर टाइप करें:\nउदाहरण: DLHC010123456789' },
+  draft_doctype_body: { en: 'What type of document would you like to draft?', hi: 'आप किस प्रकार का दस्तावेज़ ड्राफ्ट करना चाहते हैं?' },
+  draft_doctype_button: { en: 'Choose type', hi: 'प्रकार चुनें' },
+  doc_legal_notice_title: { en: 'Legal Notice', hi: 'कानूनी नोटिस' },
+  doc_legal_notice_desc:  { en: 'Demand, cessation, or reply notice', hi: 'मांग, समाप्ति या जवाबी नोटिस' },
+  doc_bail_title:    { en: 'Bail Application', hi: 'जमानत आवेदन' },
+  doc_bail_desc:     { en: 'Regular, anticipatory or interim', hi: 'नियमित, अग्रिम या अंतरिम' },
+  doc_petition_title:{ en: 'Petition / Plaint', hi: 'याचिका' },
+  doc_petition_desc: { en: 'Civil, writ or consumer complaint', hi: 'सिविल, रिट या उपभोक्ता शिकायत' },
+  doc_affidavit_title: { en: 'Affidavit', hi: 'हलफनामा' },
+  doc_affidavit_desc:  { en: 'Sworn statement of facts', hi: 'तथ्यों का शपथ-पत्र' },
+  draft_court_prompt: { en: 'Which court or forum is this for? (e.g. District Court, Saket)', hi: 'यह किस न्यायालय/फोरम के लिए है? (जैसे: जिला न्यायालय, साकेत)' },
+  draft_party_prompt: { en: "Opposing party's name? (type *skip* if not applicable)", hi: 'विपक्षी पार्टी का नाम? (लागू न हो तो *skip* टाइप करें)' },
+  draft_date_prompt:  { en: 'Date of cause of action? (type *skip* if not applicable)', hi: 'वाद कारण की तिथि? (लागू न हो तो *skip* टाइप करें)' },
+  draft_facts_prompt: { en: 'Briefly describe the facts of the case.', hi: 'मामले के तथ्यों का संक्षेप में वर्णन करें।' },
+  draft_generating:  { en: "📝 Generating your draft — this takes a minute, I'll send it here as a PDF ✅", hi: '📝 आपका ड्राफ्ट तैयार हो रहा है — इसमें एक मिनट लगेगा, मैं इसे PDF के रूप में यहाँ भेजूँगा ✅' },
+  draft_start_error: { en: 'Sorry, could not start draft generation. Please try again.', hi: 'क्षमा करें, ड्राफ्ट तैयार नहीं हो सका। पुनः प्रयास करें।' },
+};
+
+function t(key, lang) {
+  const entry = STRINGS[key] || {};
+  return entry[lang] || entry.en || '';
+}
+
+// Builds the main menu as a WhatsApp List Message (advocate: Research/Draft/Status/Help;
+// citizen: Research/Status/Help — Draft Document is advocate-only).
+function buildMenuListPayload(lang, name, userType) {
   const greet = { en: `Hello ${name}! 👋`, hi: `नमस्ते ${name}! 👋`, mr: `नमस्कार ${name}! 👋` }[lang] || `Hello ${name}! 👋`;
+  const rows = [
+    { id: 'menu_research', title: t('row_research_title', lang), description: t('row_research_desc', lang) },
+  ];
   if (userType === 'advocate') {
-    return { en: `${greet}\n\n⚖️ *Nyaya Saathi — Advocate Assistant*\n\nHow can I help you today?\n\n1️⃣ Legal Research\n2️⃣ Draft Document\n3️⃣ eCourts Case Status\n4️⃣ My Cases (App)\n5️⃣ Calendar (App)\n6️⃣ Help\n\nReply with a number.`,
-             hi: `${greet}\n\n⚖️ *न्याय साथी — अधिवक्ता सहायक*\n\nआज मैं आपकी कैसे मदद करूँ?\n\n1️⃣ कानूनी शोध\n2️⃣ दस्तावेज़ ड्राफ्ट\n3️⃣ eCourts केस स्थिति\n4️⃣ मेरे केस (ऐप)\n5️⃣ कैलेंडर (ऐप)\n6️⃣ सहायता\n\nनंबर लिखें।`,
-             mr: `${greet}\n\n⚖️ *न्याय साथी — वकील सहाय्यक*\n\nआज मी आपली कशी मदत करू?\n\n1️⃣ कायदेशीर संशोधन\n2️⃣ कागदपत्र मसुदा\n3️⃣ eCourts केस स्थिती\n4️⃣ माझे केस (अ‍ॅप)\n5️⃣ दिनदर्शिका (अ‍ॅप)\n6️⃣ मदत\n\nक्रमांक टाइप करा.` }[lang] || '';
+    rows.push({ id: 'menu_draft', title: t('row_draft_title', lang), description: t('row_draft_desc', lang) });
   }
-  return { en: `${greet}\n\n⚖️ *Nyaya Saathi — Legal Assistant*\n\nHow can I help you?\n\n1️⃣ Legal Research\n2️⃣ eCourts Case Status\n3️⃣ My Cases (App)\n4️⃣ Help\n\nReply with a number.`,
-           hi: `${greet}\n\n⚖️ *न्याय साथी — कानूनी सहायक*\n\nमैं कैसे मदद करूँ?\n\n1️⃣ कानूनी शोध\n2️⃣ eCourts केस स्थिति\n3️⃣ मेरे केस (ऐप)\n4️⃣ सहायता\n\nनंबर लिखें।`,
-           mr: `${greet}\n\n⚖️ *न्याय साथी — कायदेशीर सहाय्यक*\n\nमी कशी मदत करू?\n\n1️⃣ कायदेशीर संशोधन\n2️⃣ eCourts केस स्थिती\n3️⃣ माझे केस (अ‍ॅप)\n4️⃣ मदत\n\nक्रमांक टाइप करा.` }[lang] || '';
+  rows.push({ id: 'menu_status', title: t('row_status_title', lang), description: t('row_status_desc', lang) });
+  rows.push({ id: 'menu_help', title: t('row_help_title', lang), description: t('row_help_desc', lang) });
+
+  return buildListPayload(
+    `${greet}\n\n⚖️ *Nyaya Saathi*\n\n${t('menu_body', lang)}`,
+    t('menu_button', lang),
+    [{ title: 'Menu', rows }]
+  );
+}
+
+function buildDraftDoctypeListPayload(lang) {
+  return buildListPayload(
+    t('draft_doctype_body', lang),
+    t('draft_doctype_button', lang),
+    [{ title: 'Document Type', rows: [
+      { id: 'doc_legal-notice',     title: t('doc_legal_notice_title', lang), description: t('doc_legal_notice_desc', lang) },
+      { id: 'doc_bail-application', title: t('doc_bail_title', lang),         description: t('doc_bail_desc', lang) },
+      { id: 'doc_petition',         title: t('doc_petition_title', lang),     description: t('doc_petition_desc', lang) },
+      { id: 'doc_affidavit',        title: t('doc_affidavit_title', lang),    description: t('doc_affidavit_desc', lang) },
+    ] }]
+  );
 }
 
 // ── Legal Aid: full session handler ──────────────────────────────────────
-async function handleLegalAid(business, _contact, conversation, text, fromPhone, phoneNumberId) {
+// `choiceId` is the id of a tapped List Message row/button (e.g. 'menu_research'), if any.
+async function handleLegalAid(business, _contact, conversation, text, fromPhone, phoneNumberId, choiceId) {
   const sd       = conversation.session_data || {};
   const state    = sd.state    || 'lang_select';
   const lang     = sd.lang     || 'en';
@@ -428,13 +501,17 @@ async function handleLegalAid(business, _contact, conversation, text, fromPhone,
   const userType = sd.user_type || 'citizen';
   const appUrl   = LEGAL_AID_APP_URL + (userType === 'advocate' ? '/advocate' : '/citizen');
   const tLow     = (text || '').trim().toLowerCase();
+  // `pick` drives menu branching — a tapped list row id if present, else the typed text
+  // (keeps numeral-typing working as a fallback for users on older WhatsApp clients).
+  const pick     = choiceId || tLow;
 
   async function reply(msg) {
     if (!msg) return;
     await sendWhatsAppMessage(business.access_token, phoneNumberId, fromPhone, msg);
+    const logContent = typeof msg === 'string' ? msg : `[interactive: ${msg.interactive?.type || 'message'}]`;
     await supabase.from('messages').insert({
       conversation_id: conversation.id, from_phone: phoneNumberId, to_phone: fromPhone,
-      content: msg, direction: 'outbound', sender_type: 'ai', status: 'sent',
+      content: logContent, direction: 'outbound', sender_type: 'ai', status: 'sent',
       timestamp: new Date().toISOString(),
     });
   }
@@ -459,7 +536,7 @@ async function handleLegalAid(business, _contact, conversation, text, fromPhone,
       return;
     }
     await setSession({ state: 'menu', user_type: userType });
-    await reply(buildMenu(lang, name, userType));
+    await reply(buildMenuListPayload(lang, name, userType));
     return;
   }
 
@@ -493,7 +570,7 @@ async function handleLegalAid(business, _contact, conversation, text, fromPhone,
       const chosenLang = tLow === '1' ? 'en' : tLow === '2' ? 'hi' : 'mr';
       await setSession({ lang: chosenLang, state: 'menu' });
       await callGateway('set-language', { uid: sd.uid, language: chosenLang });
-      await reply(buildMenu(chosenLang, sd.name || 'there', sd.user_type || 'citizen'));
+      await reply(buildMenuListPayload(chosenLang, sd.name || 'there', sd.user_type || 'citizen'));
     } else {
       await reply(languagePrompt());
     }
@@ -501,40 +578,31 @@ async function handleLegalAid(business, _contact, conversation, text, fromPhone,
   }
 
   // ── Main menu ───────────────────────────────────────────────────────────
+  // `pick` matches either a tapped List Message row id or the legacy typed numeral
+  // (1=Research, 2=Draft [advocate only], 3=Status, 4=Help — citizen has no Draft row,
+  // so its Status/Help numerals shift down to 2/3).
   if (state === 'menu') {
-    if (userType === 'advocate') {
-      if (tLow === '1') {
-        await setSession({ state: 'research', user_type: userType });
-        await reply({ en: '⚖️ *Legal Research*\n\nType your legal question.\n\n' + loc('menu_back'), hi: '⚖️ *कानूनी शोध*\n\nअपना प्रश्न टाइप करें।\n\n' + loc('menu_back'), mr: '⚖️ *कायदेशीर संशोधन*\n\nआपला प्रश्न टाइप करा.\n\n' + loc('menu_back') }[lang] || '');
-      } else if (tLow === '2') {
-        await setSession({ state: 'draft', user_type: userType });
-        await reply({ en: '📝 *Draft Document*\n\nWhat type? (e.g., bail application, legal notice, vakalatnama)\n\n' + loc('menu_back'), hi: '📝 *दस्तावेज़ ड्राफ्ट*\n\nकिस प्रकार का? (जैसे: bail application, legal notice, vakalatnama)\n\n' + loc('menu_back'), mr: '📝 *कागदपत्र मसुदा*\n\nकोणत्या प्रकारचे? (उदा: bail application, legal notice)\n\n' + loc('menu_back') }[lang] || '');
-      } else if (tLow === '3') {
-        await setSession({ state: 'ecourts', user_type: userType });
-        await reply({ en: '📋 *Case Status (eCourts)*\n\nType your CNR number:\nExample: DLHC010123456789\n\n' + loc('menu_back'), hi: '📋 *केस स्थिति*\n\nCNR नंबर टाइप करें:\nउदाहरण: DLHC010123456789\n\n' + loc('menu_back'), mr: '📋 *केस स्थिती*\n\nCNR नंबर टाइप करा:\nउदा: DLHC010123456789\n\n' + loc('menu_back') }[lang] || '');
-      } else if (tLow === '4') {
-        await reply({ en: `📁 *My Cases*\n\nManage cases in the app:\n${appUrl}\n\n` + loc('menu_back'), hi: `📁 *मेरे केस*\n\nऐप खोलें:\n${appUrl}\n\n` + loc('menu_back'), mr: `📁 *माझे केस*\n\nअ‍ॅप उघडा:\n${appUrl}\n\n` + loc('menu_back') }[lang] || '');
-      } else if (tLow === '5') {
-        await reply({ en: `📅 *Calendar*\n\nView court dates:\n${appUrl}\n\n` + loc('menu_back'), hi: `📅 *कैलेंडर*\n\nतिथियाँ देखें:\n${appUrl}\n\n` + loc('menu_back'), mr: `📅 *दिनदर्शिका*\n\nतारखा पाहा:\n${appUrl}\n\n` + loc('menu_back') }[lang] || '');
-      } else if (tLow === '6') {
-        await reply({ en: `ℹ️ *Help*\n\nEmail: info@legalaidai.in\nWebsite: ${LEGAL_AID_APP_URL}\n\n` + loc('menu_back'), hi: `ℹ️ *सहायता*\n\nईमेल: info@legalaidai.in\n${LEGAL_AID_APP_URL}\n\n` + loc('menu_back'), mr: `ℹ️ *मदत*\n\nईमेल: info@legalaidai.in\n${LEGAL_AID_APP_URL}\n\n` + loc('menu_back') }[lang] || '');
-      } else {
-        await reply(buildMenu(lang, name, userType));
-      }
+    const isResearch = pick === 'menu_research' || pick === '1';
+    const isDraft     = userType === 'advocate' && (pick === 'menu_draft' || pick === '2');
+    const isStatus    = pick === 'menu_status' || (userType === 'advocate' ? pick === '3' : pick === '2');
+    const isHelp       = pick === 'menu_help'     || (userType === 'advocate' ? pick === '4' : pick === '3');
+
+    if (isResearch) {
+      await setSession({ state: 'research', user_type: userType });
+      await reply(t('research_prompt', lang) + '\n\n' + loc('menu_back'));
+    } else if (isDraft) {
+      await setSession({ state: 'draft_doctype', user_type: userType, draft: {} });
+      await reply(buildDraftDoctypeListPayload(lang));
+    } else if (isStatus) {
+      await setSession({ state: 'ecourts', user_type: userType });
+      await reply(t('status_prompt', lang) + '\n\n' + loc('menu_back'));
+    } else if (isHelp) {
+      const helpMsg = { en: `📁 *My Cases*: ${appUrl}\n📅 *Calendar*: ${appUrl}\nℹ️ Email: info@legalaidai.in\nWebsite: ${LEGAL_AID_APP_URL}`,
+                         hi: `📁 *मेरे केस*: ${appUrl}\n📅 *कैलेंडर*: ${appUrl}\nℹ️ ईमेल: info@legalaidai.in\nवेबसाइट: ${LEGAL_AID_APP_URL}` }[lang]
+                       || `📁 My Cases: ${appUrl}\n📅 Calendar: ${appUrl}\nℹ️ Email: info@legalaidai.in\nWebsite: ${LEGAL_AID_APP_URL}`;
+      await reply(helpMsg + '\n\n' + loc('menu_back'));
     } else {
-      if (tLow === '1') {
-        await setSession({ state: 'research', user_type: userType });
-        await reply({ en: '⚖️ *Legal Research*\n\nType your legal question.\n\n' + loc('menu_back'), hi: '⚖️ *कानूनी शोध*\n\nप्रश्न टाइप करें।\n\n' + loc('menu_back'), mr: '⚖️ *कायदेशीर संशोधन*\n\nप्रश्न टाइप करा.\n\n' + loc('menu_back') }[lang] || '');
-      } else if (tLow === '2') {
-        await setSession({ state: 'ecourts', user_type: userType });
-        await reply({ en: '📋 *Case Status (eCourts)*\n\nType your CNR number:\nExample: DLHC010123456789\n\n' + loc('menu_back'), hi: '📋 *केस स्थिति*\n\nCNR नंबर:\nउदाहरण: DLHC010123456789\n\n' + loc('menu_back'), mr: '📋 *केस स्थिती*\n\nCNR क्रमांक:\nउदा: DLHC010123456789\n\n' + loc('menu_back') }[lang] || '');
-      } else if (tLow === '3') {
-        await reply({ en: `📁 *My Cases*\n\nView cases:\n${appUrl}\n\n` + loc('menu_back'), hi: `📁 *मेरे केस*\n\n${appUrl}\n\n` + loc('menu_back'), mr: `📁 *माझे केस*\n\n${appUrl}\n\n` + loc('menu_back') }[lang] || '');
-      } else if (tLow === '4') {
-        await reply({ en: `ℹ️ *Help*\n\nEmail: info@legalaidai.in\nWebsite: ${LEGAL_AID_APP_URL}\n\n` + loc('menu_back'), hi: `ℹ️ *सहायता*\n\nईमेल: info@legalaidai.in\n${LEGAL_AID_APP_URL}\n\n` + loc('menu_back'), mr: `ℹ️ *मदत*\n\nईमेल: info@legalaidai.in\n${LEGAL_AID_APP_URL}\n\n` + loc('menu_back') }[lang] || '');
-      } else {
-        await reply(buildMenu(lang, name, userType));
-      }
+      await reply(buildMenuListPayload(lang, name, userType));
     }
     return;
   }
@@ -559,7 +627,7 @@ async function handleLegalAid(business, _contact, conversation, text, fromPhone,
     }
     await reply({ en: '📋 Fetching case status…', hi: '📋 केस स्थिति जाँच रहे हैं…', mr: '📋 केस स्थिती तपासत आहोत…' }[lang] || '');
     try {
-      const res = await callGateway('ecourts-status', { cnrNumber: cnr });
+      const res = await callGateway('ecourts-status', { cnrNumber: cnr, language: lang });
       await reply(res.text || { en: 'Could not fetch case status.', hi: 'केस स्थिति नहीं मिली।', mr: 'केस स्थिती मिळाली नाही.' }[lang] || '');
     } catch (e) { await reply(loc('unavailable')); }
     await setSession({ state: 'menu', user_type: userType });
@@ -567,16 +635,55 @@ async function handleLegalAid(business, _contact, conversation, text, fromPhone,
     return;
   }
 
-  // ── Draft flow (advocate only) ──────────────────────────────────────────
-  if (state === 'draft') {
-    await reply({ en: '📝 Generating draft…', hi: '📝 ड्राफ्ट तैयार हो रहा है…', mr: '📝 मसुदा तयार होत आहे…' }[lang] || '');
-    const query = `Generate a concise ${text} template for Indian courts. Plain text only, no markdown. Under 350 words.`;
+  // ── Draft flow (advocate only) — guided multi-step, ends by firing draft-request ──
+  // Doc type is picked via buildDraftDoctypeListPayload before entering 'draft_doctype';
+  // each remaining step is a short free-text prompt, accumulated in sd.draft.
+  if (state === 'draft_doctype') {
+    const docTypeId = (choiceId || tLow || '').replace(/^doc_/, '');
+    const VALID_TYPES = ['legal-notice', 'bail-application', 'petition', 'affidavit'];
+    if (!VALID_TYPES.includes(docTypeId)) {
+      await reply(buildDraftDoctypeListPayload(lang));
+      return;
+    }
+    await setSession({ state: 'draft_court', draft: { ...sd.draft, docType: docTypeId } });
+    await reply(t('draft_court_prompt', lang));
+    return;
+  }
+
+  if (state === 'draft_court') {
+    await setSession({ state: 'draft_party', draft: { ...sd.draft, court: text || '' } });
+    await reply(t('draft_party_prompt', lang));
+    return;
+  }
+
+  if (state === 'draft_party') {
+    const opposingParty = tLow === 'skip' ? '' : (text || '');
+    await setSession({ state: 'draft_date', draft: { ...sd.draft, opposingParty } });
+    await reply(t('draft_date_prompt', lang));
+    return;
+  }
+
+  if (state === 'draft_date') {
+    const causeOfActionDate = tLow === 'skip' ? '' : (text || '');
+    await setSession({ state: 'draft_facts', draft: { ...sd.draft, causeOfActionDate } });
+    await reply(t('draft_facts_prompt', lang));
+    return;
+  }
+
+  if (state === 'draft_facts') {
+    const draft = { ...sd.draft, facts: text || '' };
+    await reply(t('draft_generating', lang));
     try {
-      const res = await callGateway('research', { uid, query, language: lang });
-      await reply(res.text || { en: 'Could not generate draft.', hi: 'ड्राफ्ट तैयार नहीं हो सका।', mr: 'मसुदा तयार होऊ शकला नाही.' }[lang] || '');
-    } catch (e) { await reply(loc('unavailable')); }
-    await setSession({ state: 'menu', user_type: userType });
-    await reply(loc('menu_back'));
+      await callGateway('draft-request', {
+        uid, phone: fromPhone, language: lang,
+        docType: draft.docType, court: draft.court,
+        opposingParty: draft.opposingParty, causeOfActionDate: draft.causeOfActionDate,
+        facts: draft.facts,
+      });
+    } catch (e) {
+      await reply(t('draft_start_error', lang));
+    }
+    await setSession({ state: 'menu', user_type: userType, draft: null });
     return;
   }
 
@@ -896,6 +1003,9 @@ exports.handler = async (event) => {
       const fromPhone = message.from;
       const msgType   = message.type;
       const text      = message.text?.body || null;
+      // Tapped List Message row / Reply Button id, if this message is an interactive reply.
+      const choiceId  = message.interactive?.list_reply?.id || message.interactive?.button_reply?.id || null;
+      const choiceTitle = message.interactive?.list_reply?.title || message.interactive?.button_reply?.title || null;
       const mediaUrl  = message.image?.id || message.document?.id || null;
       const ts        = new Date(parseInt(message.timestamp || Date.now() / 1000) * 1000).toISOString();
       const waProfileName = value.contacts?.[0]?.profile?.name || null;
@@ -920,7 +1030,7 @@ exports.handler = async (event) => {
         sticker: '🔖 Sticker received', location: '📍 Location shared',
         contacts: '👤 Contact card received', reaction: '👍 Reaction received',
       };
-      const contentText = text || UNSUPPORTED_LABELS[msgType] || `[${msgType} message received]`;
+      const contentText = text || choiceTitle || UNSUPPORTED_LABELS[msgType] || `[${msgType} message received]`;
       await supabase.from('messages').insert({
         conversation_id: conversation.id,
         from_phone: fromPhone,
@@ -1021,7 +1131,7 @@ exports.handler = async (event) => {
           });
           return { statusCode: 200, body: 'OK' };
         }
-        await handleLegalAid(business, contact, conversation, text, fromPhone, phoneNumberId);
+        await handleLegalAid(business, contact, conversation, text, fromPhone, phoneNumberId, choiceId);
         return { statusCode: 200, body: 'OK' };
       }
 
