@@ -233,7 +233,7 @@
     .prod-actions { display:flex; gap:6px; padding:8px 10px; border-top:1px solid var(--border); }
     .prod-btn { flex:1; padding:5px; border:1px solid var(--border); border-radius:5px; font-size:11px; font-weight:600; cursor:pointer; background:#fff; }
     .prod-btn.share { background:var(--green); color:#fff; border-color:var(--green); }
-    .prod-btn.edit  { color:var(--primary); }
+    .prod-btn.edit  { color:var(--accent); }
     .prod-btn.del   { color:#DC2626; }
     /* Product form */
     .prod-form-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
@@ -653,7 +653,7 @@
 
       <div class="form-row" style="margin-bottom:10px">
         <label style="display:flex;align-items:center;gap:10px;font-size:13px;cursor:pointer;flex-wrap:wrap">
-          <input type="checkbox" id="bc-schedule-toggle" style="width:16px;height:16px;accent-color:var(--primary)" />
+          <input type="checkbox" id="bc-schedule-toggle" style="width:16px;height:16px;accent-color:var(--accent)" />
           <span>Schedule for later</span>
           <input type="datetime-local" id="bc-schedule-dt" style="display:none;padding:6px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px" />
         </label>
@@ -686,7 +686,7 @@
         <label style="display:flex;align-items:center;gap:5px;font-size:13px;cursor:pointer">
           <input type="checkbox" id="cat-instock-only" onchange="loadCatalogue()"> In stock only
         </label>
-        <button onclick="openProductForm(null)" style="margin-left:auto;background:var(--primary);color:#fff;border:none;padding:7px 16px;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer">+ Add Product</button>
+        <button onclick="openProductForm(null)" style="margin-left:auto;background:var(--accent);color:#fff;border:none;padding:7px 16px;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer">+ Add Product</button>
       </div>
 
       <!-- Add / Edit form -->
@@ -742,7 +742,7 @@
           </div>
         </div>
         <div style="margin-top:14px;display:flex;gap:8px">
-          <button onclick="saveProduct()" style="background:var(--primary);color:#fff;border:none;padding:8px 20px;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer">💾 Save Product</button>
+          <button onclick="saveProduct()" style="background:var(--accent);color:#fff;border:none;padding:8px 20px;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer">💾 Save Product</button>
           <span id="prod-form-status" style="font-size:12px;color:var(--muted);line-height:2.2"></span>
         </div>
       </div>
