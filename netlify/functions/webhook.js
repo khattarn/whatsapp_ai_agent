@@ -521,6 +521,22 @@ async function handleLegalAid(business, _contact, conversation, text, fromPhone,
     await supabase.from('conversations').update({ session_data: { ...sd, ...patch } }).eq('id', conversation.id);
   }
 
+  // "IN" workshop-webinar RSVP keyword — the "workshop" WA broadcast template's
+  // footer says 'reply "IN" to reserve your spot'. Must short-circuit BEFORE the
+  // lang_select/registration gate below: most recipients of that campaign have
+  // never texted this number before, so without this check they'd fall into
+  // state==='lang_select', get told they're an unregistered platform user, and
+  // never hear about the webinar at all.
+  if (tLow === 'in') {
+    await reply(
+      "You're on the list! 🎉\n\n" +
+      'To confirm your seat, please complete this 1-minute form: ' +
+      'https://www.legalaidai.in/ai-workshop-for-advocates.html?src=wa_reply_in#register\n\n' +
+      'Free intro webinar — Sunday, 26 July 2026, 10:45 AM–12:30 PM IST. See you there!'
+    );
+    return;
+  }
+
   function loc(key) {
     const MAP = {
       menu_back:   { en: 'Type *menu* to go back to the main menu.', hi: 'मुख्य मेनू के लिए *menu* टाइप करें।', mr: 'मुख्य मेनूसाठी *menu* टाइप करा.' },
