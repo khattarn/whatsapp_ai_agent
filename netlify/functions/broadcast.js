@@ -364,7 +364,11 @@ exports.handler = async (event) => {
       if (contactIds?.length) contactQuery = contactQuery.in('id', contactIds);
       else if (tags?.length) contactQuery = contactQuery.overlaps('tags', tags);
 
-      const { data: contacts } = await contactQuery;
+      const { data: contacts, error: contactsErr } = await contactQuery;
+      if (contactsErr) {
+        console.error('Contacts lookup error:', contactsErr);
+        return { statusCode: 500, headers, body: JSON.stringify({ error: contactsErr.message }) };
+      }
       if (!contacts?.length) {
         return { statusCode: 400, headers, body: JSON.stringify({ error: 'No opted-in recipients found. Import contacts and ensure opted_in is true.' }) };
       }
@@ -380,7 +384,7 @@ exports.handler = async (event) => {
       const isScheduled = !!scheduledAt;
 
       // Create broadcast record
-      const { data: broadcast } = await supabase
+      const { data: broadcast, error: broadcastErr } = await supabase
         .from('broadcasts')
         .insert({
           business_id: businessId,
@@ -402,10 +406,19 @@ exports.handler = async (event) => {
         .select()
         .single();
 
+      if (broadcastErr || !broadcast) {
+        console.error('Broadcast insert error:', broadcastErr);
+        return { statusCode: 500, headers, body: JSON.stringify({ error: broadcastErr?.message || 'Failed to create broadcast record' }) };
+      }
+
       // Insert recipient rows
-      await supabase.from('broadcast_recipients').insert(
+      const { error: recipientsErr } = await supabase.from('broadcast_recipients').insert(
         contacts.map(c => ({ broadcast_id: broadcast.id, contact_id: c.id, status: 'pending' }))
       );
+      if (recipientsErr) {
+        console.error('Broadcast recipients insert error:', recipientsErr);
+        return { statusCode: 500, headers, body: JSON.stringify({ error: recipientsErr.message }) };
+      }
 
       // Scheduled: cron will handle the send — return early
       if (isScheduled) {
