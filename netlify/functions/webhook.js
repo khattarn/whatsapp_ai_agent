@@ -357,6 +357,7 @@ ADVOCATE — Nyaya Saathi Pro:
 - 48-Hour Trial: Free (admin-approved), 50 queries
 - Month 1: ₹2,950 (₹2,500 + 18% GST), 200 queries
 - Month 2 onward: ₹5,900/month (₹5,000 + 18% GST), 300 queries
+- Annual: ₹59,000/year (₹50,000 + 18% GST), 400 queries/month, unused balance rolls over
 
 CORPORATE — Nyaya Saathi Corporate:
 - 7-Day Trial: Free (admin-approved, requires CO- invite code)
