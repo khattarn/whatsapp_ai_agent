@@ -1021,8 +1021,11 @@ exports.handler = async (event) => {
       const msgType   = message.type;
       const text      = message.text?.body || null;
       // Tapped List Message row / Reply Button id, if this message is an interactive reply.
+      // Template Quick Reply taps arrive as type:'button' with message.button.text (not
+      // message.interactive) — without this fallback they fell through to the generic
+      // "[button message received]" label instead of showing what was actually tapped.
       const choiceId  = message.interactive?.list_reply?.id || message.interactive?.button_reply?.id || null;
-      const choiceTitle = message.interactive?.list_reply?.title || message.interactive?.button_reply?.title || null;
+      const choiceTitle = message.interactive?.list_reply?.title || message.interactive?.button_reply?.title || message.button?.text || null;
       const mediaUrl  = message.image?.id || message.document?.id || null;
       const ts        = new Date(parseInt(message.timestamp || Date.now() / 1000) * 1000).toISOString();
       const waProfileName = value.contacts?.[0]?.profile?.name || null;
