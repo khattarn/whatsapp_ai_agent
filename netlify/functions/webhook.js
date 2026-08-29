@@ -139,7 +139,9 @@ async function sendInstagramMessage(accessToken, recipientId, text) {
       }),
     }
   );
-  return res.json();
+  const data = await res.json();
+  if (data.error) console.warn('[sendInstagramMessage] Graph API error:', data.error.message);
+  return data;
 }
 
 // ── Send a Facebook Messenger message via the Graph API ────────────────────
@@ -158,7 +160,9 @@ async function sendFacebookMessage(pageToken, recipientId, text) {
       }),
     }
   );
-  return res.json();
+  const data = await res.json();
+  if (data.error) console.warn('[sendFacebookMessage] Graph API error:', data.error.message);
+  return data;
 }
 
 // ── Resolve advocate name from the advocates table by phone ───────────────
@@ -853,12 +857,10 @@ async function handleSocialChannel(body) {
 
       // Helper: send reply to the right channel and store it
       async function replyOnChannel(replyText, senderType = 'ai', statusStr = 'sent') {
-        if (channel === 'instagram') {
-          await sendInstagramMessage(business.access_token, senderId, replyText);
-        } else {
-          const token = business.fb_page_token || business.access_token;
-          await sendFacebookMessage(token, senderId, replyText);
-        }
+        const token = business.fb_page_token || business.access_token;
+        const result = channel === 'instagram'
+          ? await sendInstagramMessage(token, senderId, replyText)
+          : await sendFacebookMessage(token, senderId, replyText);
         await supabase.from('messages').insert({
           conversation_id: conversation.id,
           from_phone: pageId,
@@ -866,7 +868,7 @@ async function handleSocialChannel(body) {
           content: replyText,
           direction: 'outbound',
           sender_type: senderType,
-          status: statusStr,
+          status: result.error ? 'failed' : statusStr,
           timestamp: new Date().toISOString(),
           channel,
         });
