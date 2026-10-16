@@ -20,6 +20,13 @@
   status = 200
   force = true
 
+# Product feed for Meta Commerce Manager: /feeds/<businessId>.csv → catalog-feed function.
+[[redirects]]
+  from = "/feeds/*"
+  to = "/.netlify/functions/catalog-feed?path=:splat"
+  status = 200
+  force = true
+
 # Public asset URLs: serve the Supabase 'assets' storage bucket from this site's own domain.
 # status 200 = proxied (not a 301/302), which is what Meta needs when it fetches template/broadcast media.
 # Project ref must match SUPABASE_URL; update here if the Supabase project ever changes.
