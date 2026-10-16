@@ -19,6 +19,15 @@ independent local checkouts each writing new features into `netlify/functions/we
 without pulling first caused a real (if easily-resolved) merge conflict on 2026-07-18 —
 see git log around commits `72936c9` / `dd964e7` for the incident if useful context.
 
+## Multi-tenant / subscription work lives in `wa-module`, not here
+
+The sellable, multi-tenant version of this product (portal module: AI inbox, catalogue,
+broadcasts; own repo and database, Postgres row-level security) is
+`github.com/khattarn/wa-module` (local: `C:\Projects\wa-module`) — read its `CLAUDE.md`
+first. This repo keeps serving the existing single-business deployments (Garment Retail,
+LegalAid/Nyaya Saathi): keep changes here to fixes and those businesses' needs, and don't
+build new-tenant features into `webhook.js`.
+
 ## webhook.js — who owns which part
 
 `netlify/functions/webhook.js` is a single shared Meta webhook handler for **multiple

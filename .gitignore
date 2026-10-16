@@ -7,3 +7,6 @@ node_modules/
 dist/
 dist-deploy/
 downloads/
+
+# Supabase CLI local link state (machine-specific, not source)
+supabase/.temp/
