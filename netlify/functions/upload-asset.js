@@ -22,6 +22,16 @@ const supabase = createClient(
 const BUCKET = 'assets';
 const HEADERS = { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' };
 
+// Public asset URLs are served from this site's own domain — netlify.toml rewrites /assets/* to the
+// Supabase 'assets' bucket — so the Supabase host never appears in saved URLs. The base is taken from the
+// request, so it follows the site's current domain. Falls back to the raw Supabase URL if no host is known.
+function assetUrl(event, path) {
+  const host = event.headers?.['x-forwarded-host'] || event.headers?.host;
+  if (!host) return supabase.storage.from(BUCKET).getPublicUrl(path).data.publicUrl;
+  const proto = /^(localhost|127\.)/.test(host) ? 'http' : 'https';
+  return `${proto}://${host}/assets/${path.split('/').map(encodeURIComponent).join('/')}`;
+}
+
 exports.handler = async (event) => {
   if (event.httpMethod === 'OPTIONS') return { statusCode: 200, headers: HEADERS };
 
@@ -45,7 +55,7 @@ exports.handler = async (event) => {
         size: f.metadata?.size || 0,
         contentType: f.metadata?.mimetype || 'application/octet-stream',
         updatedAt: f.updated_at,
-        url: supabase.storage.from(BUCKET).getPublicUrl(`${businessId}/${f.name}`).data.publicUrl,
+        url: assetUrl(event, `${businessId}/${f.name}`),
       }));
 
     return { statusCode: 200, headers: HEADERS, body: JSON.stringify({ assets }) };
@@ -68,9 +78,7 @@ exports.handler = async (event) => {
       const { data, error } = await supabase.storage.from(BUCKET).createSignedUploadUrl(path);
       if (error) return { statusCode: 500, headers: HEADERS, body: JSON.stringify({ error: error.message }) };
 
-      const { data: { publicUrl } } = supabase.storage.from(BUCKET).getPublicUrl(path);
-
-      return { statusCode: 200, headers: HEADERS, body: JSON.stringify({ signedUrl: data.signedUrl, path, publicUrl }) };
+      return { statusCode: 200, headers: HEADERS, body: JSON.stringify({ signedUrl: data.signedUrl, path, publicUrl: assetUrl(event, path) }) };
     } catch (err) {
       console.error('[upload-asset] POST error:', err);
       return { statusCode: 500, headers: HEADERS, body: JSON.stringify({ error: err.message }) };

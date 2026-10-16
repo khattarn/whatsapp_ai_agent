@@ -20,6 +20,15 @@
   status = 200
   force = true
 
+# Public asset URLs: serve the Supabase 'assets' storage bucket from this site's own domain.
+# status 200 = proxied (not a 301/302), which is what Meta needs when it fetches template/broadcast media.
+# Project ref must match SUPABASE_URL; update here if the Supabase project ever changes.
+[[redirects]]
+  from = "/assets/*"
+  to = "https://wbxhdagtlcrnianqkwdo.supabase.co/storage/v1/object/public/assets/:splat"
+  status = 200
+  force = true
+
 [[headers]]
   for = "/*"
   [headers.values]

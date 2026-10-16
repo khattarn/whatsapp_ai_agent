@@ -758,6 +758,24 @@
       <div id="product-grid" class="prod-grid"></div>
       <div id="product-empty" style="display:none;text-align:center;padding:40px;color:var(--muted);font-size:13px">No products yet — click + Add Product to get started.</div>
     </div>
+
+    <!-- Assets Library — same store as Templates → Assets Library, for the business selected above -->
+    <div class="card">
+      <h3>🖼️ Assets Library</h3>
+      <p style="font-size:13px;color:var(--muted);margin-bottom:12px">Upload product images here for the business selected above. They're saved to the same Assets Library used by Templates and Broadcasts, and show up in <strong>🖼️ Choose from Gallery</strong> when adding a product.</p>
+
+      <div class="asset-dz" id="cat-asset-drop-zone">
+        <div style="font-size:32px;margin-bottom:6px">📁</div>
+        <div style="font-weight:600;font-size:14px;margin-bottom:4px">Drop files here or click to browse</div>
+        <div style="font-size:12px;color:var(--muted)">JPEG, PNG, GIF, WebP, MP4, PDF · Max 10 MB</div>
+        <input type="file" id="cat-asset-file-input" accept="image/*,video/mp4,application/pdf" multiple style="display:none" />
+      </div>
+      <div id="cat-asset-upload-progress" style="font-size:13px;margin-top:8px"></div>
+
+      <div id="cat-asset-gallery" style="margin-top:4px">
+        <div style="color:var(--muted);font-size:13px;text-align:center;padding:16px">Select a business above to load assets</div>
+      </div>
+    </div>
   </div>
 
   <!-- ═══ TEMPLATES ═══ -->
@@ -1287,7 +1305,7 @@ document.querySelectorAll('.main-tab').forEach(tab => {
     if (id === 'inbox') document.getElementById('panel-inbox').style.display = 'flex';
     else document.getElementById(`panel-${id}`).style.display = 'flex';
     if (id === 'broadcast') loadBroadcastHistory();
-    if (id === 'catalogue') loadCatalogue();
+    if (id === 'catalogue') { loadCatalogue(); loadAssets('cat'); }
     if (id === 'templates') refreshTemplatesTab();
     if (id === 'settings') renderSettings();
   });
@@ -2409,7 +2427,7 @@ function populateCatBizSelect() {
   const garment = realBizs.find(b => b.name.toLowerCase().includes('garment'));
   if (garment) sel.value = garment.id;
 }
-document.getElementById('cat-biz-select').addEventListener('change', loadCatalogue);
+document.getElementById('cat-biz-select').addEventListener('change', () => { loadCatalogue(); loadAssets('cat'); });
 
 // ══════════════════════════════════════════════════
 // ═══ TEMPLATES TAB ═══════════════════════════════
@@ -2716,9 +2734,17 @@ function assetIcon(name) {
   return '📎';
 }
 
-function renderAssetGrid(assets, containerId, mode, selectedUrl = '') {
+// The Assets Library appears on two screens (Templates tab and Catalogue tab). Both read and write the
+// same per-business storage folder; each key below just names that screen's DOM elements.
+const ASSET_UI = {
+  lib: { biz: 'asset-biz-select', gallery: 'asset-gallery',     progress: 'asset-upload-progress',     dropZone: 'asset-drop-zone',     fileInput: 'asset-file-input' },
+  cat: { biz: 'cat-biz-select',   gallery: 'cat-asset-gallery', progress: 'cat-asset-upload-progress', dropZone: 'cat-asset-drop-zone', fileInput: 'cat-asset-file-input' },
+};
+
+function renderAssetGrid(assets, containerId, mode, selectedUrl = '', ui = 'lib') {
   // mode: 'library' shows copy+delete; 'picker' shows select button (and the whole thumbnail is clickable)
   // selectedUrl: in picker mode, the card whose URL matches is highlighted
+  // ui: which Assets Library screen ('lib' | 'cat') the delete button should act on
   const el = document.getElementById(containerId);
   if (!assets.length) { el.innerHTML = '<div style="color:var(--muted);font-size:13px;text-align:center;padding:20px">No assets uploaded yet</div>'; return; }
   el.innerHTML = `<div class="asset-grid">${assets.map(a => {
@@ -2731,7 +2757,7 @@ function renderAssetGrid(assets, containerId, mode, selectedUrl = '') {
     const buttons  = mode === 'picker'
       ? `<button class="asset-copy-btn" style="background:var(--green);color:#fff" onclick="pickAsset('${safeUrl}')">✔ Use</button>`
       : `<button class="asset-copy-btn" onclick="copyAssetUrl('${safeUrl}')">📋 Copy URL</button>
-         <button class="asset-del-btn"  onclick="deleteAsset('${safePath}')">🗑</button>`;
+         <button class="asset-del-btn"  onclick="deleteAsset('${safePath}','${ui}')">🗑</button>`;
     const pickAttrs = mode === 'picker' ? ` style="cursor:pointer" onclick="pickAsset('${safeUrl}')"` : '';
     return `<div class="asset-card${mode === 'picker' && selectedUrl && a.url === selectedUrl ? ' selected' : ''}">
       <div${pickAttrs}>${thumb}</div>
@@ -2743,14 +2769,15 @@ function renderAssetGrid(assets, containerId, mode, selectedUrl = '') {
   }).join('')}</div>`;
 }
 
-async function loadAssets(containerId = 'asset-gallery', mode = 'library') {
-  const bizId = document.getElementById('asset-biz-select').value;
-  const el = document.getElementById(containerId);
+async function loadAssets(ui = 'lib') {
+  const ids = ASSET_UI[ui];
+  const bizId = document.getElementById(ids.biz).value;
+  const el = document.getElementById(ids.gallery);
   if (!bizId) { el.innerHTML = '<div style="color:var(--muted);font-size:13px;text-align:center;padding:16px">Select a business above to load assets</div>'; return; }
   el.innerHTML = '<div style="text-align:center;padding:16px"><span class="spinner dark"></span></div>';
   try {
     const data = await api(`upload-asset?businessId=${bizId}`);
-    renderAssetGrid(data.assets || [], containerId, mode);
+    renderAssetGrid(data.assets || [], ids.gallery, 'library', '', ui);
   } catch (e) {
     el.innerHTML = '<div style="color:red;font-size:13px;text-align:center;padding:16px">Failed to load assets</div>';
   }
@@ -2765,19 +2792,19 @@ function copyAssetUrl(url) {
   });
 }
 
-async function deleteAsset(encodedPath) {
+async function deleteAsset(encodedPath, ui = 'lib') {
   const path = decodeURIComponent(encodedPath);
-  const bizId = document.getElementById('asset-biz-select').value;
+  const bizId = document.getElementById(ASSET_UI[ui].biz).value;
   if (!confirm(`Delete asset "${path.split('/').pop()}"?`)) return;
   try {
     const res = await api(`upload-asset?businessId=${bizId}&path=${encodedPath}`, { method: 'DELETE' });
-    if (res.success) { toast('✅ Asset deleted'); loadAssets(); }
+    if (res.success) { toast('✅ Asset deleted'); loadAssets(ui); }
     else toast('❌ ' + (res.error || 'Delete failed'));
   } catch (e) { toast('❌ Network error'); }
 }
 
-async function uploadFiles(files, bizId) {
-  const progress = document.getElementById('asset-upload-progress');
+async function uploadFiles(files, bizId, ui = 'lib') {
+  const progress = document.getElementById(ASSET_UI[ui].progress);
   let done = 0;
   for (const file of files) {
     progress.innerHTML = `<span class="spinner dark"></span> Uploading ${done + 1}/${files.length}: ${escHtml(file.name)}…`;
@@ -2800,27 +2827,30 @@ async function uploadFiles(files, bizId) {
     } catch (e) { toast(`❌ Error uploading ${file.name}`); }
   }
   progress.innerHTML = done > 0 ? `<span style="color:green">✅ ${done} file${done !== 1 ? 's' : ''} uploaded</span>` : '';
-  if (done > 0) loadAssets();
+  if (done > 0) loadAssets(ui);
   setTimeout(() => { progress.innerHTML = ''; }, 4000);
 }
 
-// Drop zone
-const assetDz = document.getElementById('asset-drop-zone');
-assetDz.addEventListener('click', () => document.getElementById('asset-file-input').click());
-assetDz.addEventListener('dragover', e => { e.preventDefault(); assetDz.classList.add('dragover'); });
-assetDz.addEventListener('dragleave', () => assetDz.classList.remove('dragover'));
-assetDz.addEventListener('drop', e => {
-  e.preventDefault(); assetDz.classList.remove('dragover');
-  const bizId = document.getElementById('asset-biz-select').value;
-  if (!bizId) { toast('Select a business first'); return; }
-  if (e.dataTransfer.files.length) uploadFiles([...e.dataTransfer.files], bizId);
+// Drop zone + file input + business change, wired for each Assets Library screen
+Object.entries(ASSET_UI).forEach(([ui, ids]) => {
+  const dz = document.getElementById(ids.dropZone);
+  const fileInput = document.getElementById(ids.fileInput);
+  dz.addEventListener('click', () => fileInput.click());
+  dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('dragover'); });
+  dz.addEventListener('dragleave', () => dz.classList.remove('dragover'));
+  dz.addEventListener('drop', e => {
+    e.preventDefault(); dz.classList.remove('dragover');
+    const bizId = document.getElementById(ids.biz).value;
+    if (!bizId) { toast('Select a business first'); return; }
+    if (e.dataTransfer.files.length) uploadFiles([...e.dataTransfer.files], bizId, ui);
+  });
+  fileInput.addEventListener('change', e => {
+    const bizId = document.getElementById(ids.biz).value;
+    if (!bizId) { toast('Select a business first'); return; }
+    if (e.target.files.length) { uploadFiles([...e.target.files], bizId, ui); e.target.value = ''; }
+  });
 });
-document.getElementById('asset-file-input').addEventListener('change', e => {
-  const bizId = document.getElementById('asset-biz-select').value;
-  if (!bizId) { toast('Select a business first'); return; }
-  if (e.target.files.length) { uploadFiles([...e.target.files], bizId); e.target.value = ''; }
-});
-document.getElementById('asset-biz-select').addEventListener('change', () => loadAssets());
+document.getElementById('asset-biz-select').addEventListener('change', () => loadAssets('lib'));
 
 // Asset picker modal
 // opts (all optional): { bizSelectId, imagesOnly, title }
