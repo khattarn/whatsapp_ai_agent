@@ -729,8 +729,15 @@
             <input id="pf-colors" type="text" placeholder="e.g. Red, Blue, Black">
           </div>
           <div class="prod-form-row" style="grid-column:1/-1">
-            <label>Image URL</label>
-            <input id="pf-image" type="url" placeholder="https://… (paste URL or pick from assets)">
+            <label>Product Image</label>
+            <div style="display:flex;gap:8px;align-items:center">
+              <input id="pf-image" type="url" style="flex:1;min-width:0" placeholder="https://… (paste URL or choose from gallery)" oninput="updateProductImagePreview()">
+              <button type="button" class="btn-secondary" style="white-space:nowrap" onclick="openProductImageGallery()">🖼️ Choose from Gallery</button>
+            </div>
+            <div id="pf-image-preview-wrap" style="display:none;align-items:center;gap:10px;margin-top:6px">
+              <img id="pf-image-preview" alt="Selected product image" style="width:72px;height:72px;object-fit:cover;border-radius:8px;border:1px solid var(--border);background:#f3f4f6" onerror="document.getElementById('pf-image-preview-wrap').style.display='none'">
+              <button type="button" class="btn-secondary" style="padding:4px 10px;font-size:12px" onclick="document.getElementById('pf-image').value='';updateProductImagePreview()">✕ Remove</button>
+            </div>
           </div>
           <div class="prod-form-row" style="grid-column:1/-1">
             <label>Order / Payment Link</label>
@@ -931,7 +938,7 @@
 <div id="asset-picker-modal">
   <div class="picker-inner">
     <div class="picker-head">
-      <h4>📁 Pick from Assets Library</h4>
+      <h4 id="picker-title">📁 Pick from Assets Library</h4>
       <button class="picker-close" onclick="closeAssetPicker()">✕</button>
     </div>
     <div class="picker-body">
@@ -2241,6 +2248,7 @@ function openProductForm(product) {
   document.getElementById('pf-sizes').value      = (product?.sizes || []).join(', ');
   document.getElementById('pf-colors').value     = (product?.colors || []).join(', ');
   document.getElementById('pf-image').value      = product?.image_url || '';
+  updateProductImagePreview();
   document.getElementById('pf-payment').value    = product?.payment_url || '';
   document.getElementById('pf-desc').value       = product?.description || '';
   document.getElementById('prod-form-status').textContent = '';
@@ -2250,6 +2258,21 @@ function openProductForm(product) {
 
 function closeProductForm() {
   document.getElementById('product-form-wrap').style.display = 'none';
+}
+
+// Thumbnail under the Image field — follows whatever is typed, pasted, or picked from the gallery
+function updateProductImagePreview() {
+  const url  = document.getElementById('pf-image').value.trim();
+  const wrap = document.getElementById('pf-image-preview-wrap');
+  const img  = document.getElementById('pf-image-preview');
+  if (!url) { wrap.style.display = 'none'; img.removeAttribute('src'); return; }
+  img.src = url;
+  wrap.style.display = 'flex';
+}
+
+// Image gallery for the product form — the Assets Library picker, scoped to the catalogue's business and images only
+function openProductImageGallery() {
+  openAssetPicker('pf-image', { bizSelectId: 'cat-biz-select', imagesOnly: true, title: '🖼️ Choose Product Image' });
 }
 
 async function saveProduct() {
@@ -2693,8 +2716,9 @@ function assetIcon(name) {
   return '📎';
 }
 
-function renderAssetGrid(assets, containerId, mode) {
-  // mode: 'library' shows copy+delete; 'picker' shows select button
+function renderAssetGrid(assets, containerId, mode, selectedUrl = '') {
+  // mode: 'library' shows copy+delete; 'picker' shows select button (and the whole thumbnail is clickable)
+  // selectedUrl: in picker mode, the card whose URL matches is highlighted
   const el = document.getElementById(containerId);
   if (!assets.length) { el.innerHTML = '<div style="color:var(--muted);font-size:13px;text-align:center;padding:20px">No assets uploaded yet</div>'; return; }
   el.innerHTML = `<div class="asset-grid">${assets.map(a => {
@@ -2708,8 +2732,9 @@ function renderAssetGrid(assets, containerId, mode) {
       ? `<button class="asset-copy-btn" style="background:var(--green);color:#fff" onclick="pickAsset('${safeUrl}')">✔ Use</button>`
       : `<button class="asset-copy-btn" onclick="copyAssetUrl('${safeUrl}')">📋 Copy URL</button>
          <button class="asset-del-btn"  onclick="deleteAsset('${safePath}')">🗑</button>`;
-    return `<div class="asset-card">
-      ${thumb}
+    const pickAttrs = mode === 'picker' ? ` style="cursor:pointer" onclick="pickAsset('${safeUrl}')"` : '';
+    return `<div class="asset-card${mode === 'picker' && selectedUrl && a.url === selectedUrl ? ' selected' : ''}">
+      <div${pickAttrs}>${thumb}</div>
       <div class="asset-footer">
         <span class="asset-fname" title="${escHtml(a.name)}">${escHtml(a.name.replace(/^\d+-/, ''))}</span>
       </div>
@@ -2798,18 +2823,29 @@ document.getElementById('asset-file-input').addEventListener('change', e => {
 document.getElementById('asset-biz-select').addEventListener('change', () => loadAssets());
 
 // Asset picker modal
-function openAssetPicker(targetInputId) {
+// opts (all optional): { bizSelectId, imagesOnly, title }
+//   bizSelectId — <select> whose value is the business to load assets for (default: template form's business)
+//   imagesOnly  — hide videos/PDFs, e.g. for product images
+//   title       — modal heading (default: "Pick from Assets Library")
+function openAssetPicker(targetInputId, opts = {}) {
   _pickerTargetId = targetInputId;
   const modal = document.getElementById('asset-picker-modal');
+  document.getElementById('picker-title').textContent = opts.title || '📁 Pick from Assets Library';
   modal.classList.add('show');
-  // Load assets using the template biz select
-  const bizId = document.getElementById('tpl-biz-select').value ||
-                document.getElementById('asset-biz-select').value;
+  const bizId = opts.bizSelectId
+    ? document.getElementById(opts.bizSelectId).value
+    : (document.getElementById('tpl-biz-select').value || document.getElementById('asset-biz-select').value);
   const el = document.getElementById('picker-gallery');
-  if (!bizId) { el.innerHTML = '<div style="color:var(--muted);font-size:13px;text-align:center;padding:20px">Select a business in the Create Template form first</div>'; return; }
+  if (!bizId) { el.innerHTML = `<div style="color:var(--muted);font-size:13px;text-align:center;padding:20px">${opts.bizSelectId ? 'Select a business first' : 'Select a business in the Create Template form first'}</div>`; return; }
   el.innerHTML = '<div style="text-align:center;padding:24px"><span class="spinner dark"></span></div>';
   api(`upload-asset?businessId=${bizId}`).then(data => {
-    renderAssetGrid(data.assets || [], 'picker-gallery', 'picker');
+    let assets = data.assets || [];
+    if (opts.imagesOnly) assets = assets.filter(a => isImage(a.name));
+    if (!assets.length) {
+      el.innerHTML = `<div style="color:var(--muted);font-size:13px;text-align:center;padding:24px;line-height:1.6">No ${opts.imagesOnly ? 'images' : 'assets'} in this business's library yet.<br>Upload some in <strong>Templates → Assets Library</strong>, then come back and pick one.</div>`;
+      return;
+    }
+    renderAssetGrid(assets, 'picker-gallery', 'picker', document.getElementById(targetInputId).value.trim());
   }).catch(() => {
     el.innerHTML = '<div style="color:red;font-size:13px;text-align:center;padding:20px">Failed to load assets</div>';
   });
@@ -2822,7 +2858,9 @@ function closeAssetPicker() {
 
 function pickAsset(url) {
   if (_pickerTargetId) {
-    document.getElementById(_pickerTargetId).value = url;
+    const input = document.getElementById(_pickerTargetId);
+    input.value = url;
+    input.dispatchEvent(new Event('input', { bubbles: true }));   // lets previews / listeners react
   }
   closeAssetPicker();
   toast('✅ Asset URL selected');
