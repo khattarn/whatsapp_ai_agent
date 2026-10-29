@@ -421,6 +421,56 @@ async function answerLegalAidQuestion(text, lang, { bilingual = false } = {}) {
   }
 }
 
+// ── Legal Aid: Rohini workshop follow-up ───────────────────────────────────
+// Advocates who attended the "AI in Legal Practice in India" workshop at the Rohini
+// District Courts Bar Association and then messaged this number were sent a follow-up
+// asking for their email id (link + code for the 7-day free trial) and offering a Zoom
+// demo. That send puts their conversation in state 'workshop_followup'; replies land in
+// the matching branch of handleLegalAid().
+const WORKSHOP_EMAIL_RE = /[A-Za-z0-9._%+-]+@[A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)*\.[A-Za-z]{2,}/;
+const WORKSHOP_DEMO_RE  = /\b(demo|demonstration|zoom)\b/i;
+
+const WORKSHOP_FALLBACK_TEXT =
+  'Thank you for your message! 🙏 Our team will get back to you during working hours.\n\n' +
+  "If you haven't already, please share your email id so that we can send you the link for LegalAidAI.in Nyaya Saathi, which you can use free of cost for 7 days.\n\n" +
+  'Team Nyaya Saathi';
+
+function workshopFollowupSystemPrompt(hasEmail) {
+  return `You are Nyaya Saathi, the WhatsApp assistant of LegalAid AI (LegalAidAI.in). You are replying to an Indian advocate who attended our workshop "AI in Legal Practice in India - an honest perspective" at the Rohini District Courts Bar Association and then messaged this number. We have already sent them a thank-you message asking for their email id and offering a free demo.
+
+Facts you may rely on (nothing else):
+- Workshop attendees can use the LegalAidAI.in Nyaya Saathi software free of cost for 7 days. This 7-day trial replaces the shorter trial in the pricing list below.
+- To get access we need their email id. Once they share it, our team sends them a link to the software along with the access code.
+- We can arrange a free demo through a Zoom call; our team will coordinate it.
+- They can use this WhatsApp number for other AI-related queries during working hours.
+- ${hasEmail ? 'They have already shared their email id - do not ask for it again.' : 'They have not shared their email id yet.'}
+
+Pricing (share only if asked, exactly as listed):
+${LEGAL_AID_PRICING_INFO}
+
+How to reply:
+- Write in the language they used (English, Hindi in Devanagari, or Hinglish in Roman script). Be warm and brief: under 100 words, plain text, no markdown.
+- If they are thanking or acknowledging us, respond graciously.
+- Answer questions about the software, the trial or the demo from the facts above. If they ask a general legal question, answer it briefly with the relevant Indian law.
+${hasEmail ? '' : '- Unless your reply already asks for it, end by gently asking for their email id.\n'}- Never invent features, dates, discounts, access codes or links.
+- If you cannot fully answer from the facts above (a complaint, a custom-pricing request, a technical problem, anything you are unsure of), tell them our team will get back to them during working hours and end your reply with the exact token [HUMAN].`;
+}
+
+async function answerWorkshopFollowup(text, { hasEmail = false } = {}) {
+  try {
+    const aiRes = await anthropic.messages.create({
+      model: 'claude-haiku-4-5-20251001',
+      max_tokens: 500,
+      system: workshopFollowupSystemPrompt(hasEmail),
+      messages: [{ role: 'user', content: text || '' }],
+    });
+    return aiRes.content[0]?.text || null;
+  } catch (e) {
+    console.error('[answerWorkshopFollowup] error:', e.message);
+    return null;
+  }
+}
+
 // ── Bilingual (EN/HI) string table for the interactive menu + guided draft flow ──
 // Marathi ('mr') falls back to English for these strings — new interactive content is
 // EN/HI only for this build; existing plain-text flows keep their separate mr strings.
@@ -497,9 +547,9 @@ function buildDraftDoctypeListPayload(lang) {
 
 // ── Legal Aid: full session handler ──────────────────────────────────────
 // `choiceId` is the id of a tapped List Message row/button (e.g. 'menu_research'), if any.
-async function handleLegalAid(business, _contact, conversation, text, fromPhone, phoneNumberId, choiceId) {
+async function handleLegalAid(business, contact, conversation, text, fromPhone, phoneNumberId, choiceId) {
   const sd       = conversation.session_data || {};
-  const state    = sd.state    || 'lang_select';
+  let   state    = sd.state    || 'lang_select';
   const lang     = sd.lang     || 'en';
   const uid      = sd.uid      || null;
   const name     = sd.name     || 'there';
@@ -559,6 +609,55 @@ async function handleLegalAid(business, _contact, conversation, text, fromPhone,
     await setSession({ state: 'menu', user_type: userType });
     await reply(buildMenuListPayload(lang, name, userType));
     return;
+  }
+
+  // ── Rohini workshop follow-up replies ───────────────────────────────────
+  // An email id or a demo request is handled deterministically (thank-you, saved on the
+  // contact, flagged for the team); anything else goes to a workshop-aware AI reply.
+  if (state === 'workshop_followup') {
+    if (/^[123]$/.test(tLow)) {
+      // A menu digit typed out of habit from the earlier welcome menu — hand back to that flow.
+      await setSession({ state: 'unregistered_menu' });
+      state = 'unregistered_menu';
+    } else {
+      const email     = (text || '').match(WORKSHOP_EMAIL_RE)?.[0] || null;
+      const wantsDemo = WORKSHOP_DEMO_RE.test(text || '');
+
+      if (email || wantsDemo) {
+        const note = `Email: ${email}`;
+        const notes = !email || (contact?.notes || '').includes(note)
+          ? contact?.notes
+          : [contact?.notes, note].filter(Boolean).join('\n');
+        const tags = new Set(contact?.tags || []);
+        if (email) tags.add('workshop-email-received');
+        if (wantsDemo) tags.add('workshop-demo-requested');
+        await supabase.from('contacts').update({ notes, tags: [...tags] }).eq('id', contact.id);
+        if (email) await setSession({ workshop_email: email });
+        await supabase.from('conversations').update({ needs_human: true }).eq('id', conversation.id);
+
+        const parts = [];
+        if (email) {
+          parts.push(
+            'Thank you for sharing your email id! 🙏\n\n' +
+            `We will share a link for our software LegalAidAI.in Nyaya Saathi, along with the code, on ${email}. You can use it free of cost for 7 days.`
+          );
+        }
+        if (wantsDemo) {
+          parts.push(email
+            ? 'We will also arrange a free demo for you through a Zoom call.'
+            : 'Sure! Our team will arrange a free demo for you through a Zoom call. Please share your email id so that we can send you the details.');
+        }
+        parts.push('Team Nyaya Saathi');
+        await reply(parts.join('\n\n'));
+        return;
+      }
+
+      const answer = await answerWorkshopFollowup(text, { hasEmail: !!sd.workshop_email });
+      const escalate = !answer || answer.includes('[HUMAN]');
+      if (escalate) await supabase.from('conversations').update({ needs_human: true }).eq('id', conversation.id);
+      await reply((answer || '').replace(/\s*\[HUMAN\]\s*/g, ' ').trim() || WORKSHOP_FALLBACK_TEXT);
+      return;
+    }
   }
 
   // ── Verify + language selection ─────────────────────────────────────────
