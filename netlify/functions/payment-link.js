@@ -10,6 +10,7 @@
 
 const { createClient } = require('@supabase/supabase-js');
 const crypto            = require('crypto');
+const { isBlockedNumber, BLOCKED_SEND_RESULT } = require('./_lib/blocklist');
 
 const supabase = createClient(
   process.env.SUPABASE_URL,
@@ -112,6 +113,7 @@ function formatPaymentMessage({ amount, description, payuUrl, upiId, businessNam
 
 /** Send a WhatsApp text message */
 async function sendWhatsAppMessage(accessToken, phoneNumberId, toPhone, text) {
+  if (isBlockedNumber(toPhone)) return BLOCKED_SEND_RESULT;   // global block list
   const res = await fetch(
     `https://graph.facebook.com/v19.0/${phoneNumberId}/messages`,
     {

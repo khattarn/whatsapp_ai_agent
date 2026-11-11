@@ -8,6 +8,7 @@ const { createClient } = require('@supabase/supabase-js');
 const Anthropic = require('@anthropic-ai/sdk');
 const https = require('https');
 const http = require('http');
+const { isBlockedNumber, BLOCKED_SEND_RESULT } = require('./_lib/blocklist');
 
 const supabase = createClient(
   process.env.SUPABASE_URL,
@@ -95,6 +96,8 @@ function isSimpleQuery(text) {
 // every existing call site keeps working unchanged) or a pre-built payload object to
 // merge in as-is (e.g. { type:'interactive', interactive:{...} } for list messages).
 async function sendWhatsAppMessage(accessToken, phoneNumberId, toPhone, textOrPayload) {
+  // Global block list: never send to a blocked number (callers treat this as a failed send).
+  if (isBlockedNumber(toPhone)) return BLOCKED_SEND_RESULT;
   const extra = typeof textOrPayload === 'string'
     ? { type: 'text', text: { preview_url: false, body: textOrPayload } }
     : textOrPayload;
@@ -1130,6 +1133,13 @@ exports.handler = async (event) => {
       const mediaUrl  = message.image?.id || message.document?.id || null;
       const ts        = new Date(parseInt(message.timestamp || Date.now() / 1000) * 1000).toISOString();
       const waProfileName = value.contacts?.[0]?.profile?.name || null;
+
+      // Global block list: drop anything a blocked number sends — nothing is stored, no
+      // contact/conversation is created, no bot reply goes out. 200 so Meta doesn't retry.
+      if (isBlockedNumber(fromPhone)) {
+        console.log('[webhook] message from a blocked number dropped');
+        return { statusCode: 200, body: 'OK' };
+      }
 
       // Find the business this phone number belongs to
       const { data: business } = await supabase

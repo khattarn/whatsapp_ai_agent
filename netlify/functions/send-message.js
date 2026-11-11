@@ -6,6 +6,7 @@
 // ================================================
 
 const { createClient } = require('@supabase/supabase-js');
+const { isBlockedNumber } = require('./_lib/blocklist');
 
 const supabase = createClient(
   process.env.SUPABASE_URL,
@@ -76,6 +77,15 @@ exports.handler = async (event) => {
 
     const { businesses: biz, contacts: contact } = conv;
     const channel = conv.channel || 'whatsapp';
+
+    // Global block list (WhatsApp numbers): refuse before sending or logging anything.
+    if (channel === 'whatsapp' && isBlockedNumber(contact?.phone)) {
+      return {
+        statusCode: 403,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ error: 'This number is on the block list — message not sent' }),
+      };
+    }
 
     // Send via the appropriate channel API
     let sendResult;

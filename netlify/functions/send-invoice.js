@@ -10,6 +10,7 @@
 // ================================================
 
 const { createClient } = require('@supabase/supabase-js');
+const { isBlockedNumber, BLOCKED_SEND_RESULT } = require('./_lib/blocklist');
 
 const supabase = createClient(
   process.env.SUPABASE_URL,
@@ -59,6 +60,7 @@ async function uploadPdf(businessId, invoiceNo, base64Pdf) {
 
 // ── Helper: send WhatsApp document message ─────────────────────────────────
 async function sendWhatsAppDocument(accessToken, phoneNumberId, toPhone, pdfUrl, filename, caption) {
+  if (isBlockedNumber(toPhone)) return BLOCKED_SEND_RESULT;   // global block list
   const res = await fetch(
     `https://graph.facebook.com/v19.0/${phoneNumberId}/messages`,
     {
@@ -85,6 +87,7 @@ async function sendWhatsAppDocument(accessToken, phoneNumberId, toPhone, pdfUrl,
 
 // ── Helper: send WhatsApp text message ────────────────────────────────────
 async function sendWhatsAppText(accessToken, phoneNumberId, toPhone, text) {
+  if (isBlockedNumber(toPhone)) return BLOCKED_SEND_RESULT;   // global block list
   const res = await fetch(
     `https://graph.facebook.com/v19.0/${phoneNumberId}/messages`,
     {

@@ -5,6 +5,7 @@
 // ================================================
 
 const { createClient } = require('@supabase/supabase-js');
+const { isBlockedNumber, BLOCKED_SEND_RESULT } = require('./_lib/blocklist');
 
 const supabase = createClient(
   process.env.SUPABASE_URL,
@@ -105,6 +106,12 @@ async function processBroadcast(broadcast, biz) {
 
     // Phase 1: send messages sequentially with 50ms gap
     for (const contact of group) {
+      // Global block list: record as failed with a clear reason; no send, no chat bubble.
+      if (isBlockedNumber(contact.phone)) {
+        totalFailed++;
+        results.push({ contact, msgId: null, metaErr: `${BLOCKED_SEND_RESULT.error.code}: ${BLOCKED_SEND_RESULT.error.message}`, status: 'failed', blocked: true });
+        continue;
+      }
       try {
         const payload = buildPayload(campaign, contact);
         const waRes = await sendWhatsAppMessage(biz.access_token, biz.phone_number_id, contact.phone, payload);
@@ -122,11 +129,12 @@ async function processBroadcast(broadcast, biz) {
     }
 
     // Phase 2: flush DB writes in parallel
-    await Promise.all(results.map(async ({ contact, msgId, metaErr, status }) => {
+    await Promise.all(results.map(async ({ contact, msgId, metaErr, status, blocked }) => {
       await supabase.from('broadcast_recipients')
         .update({ status, meta_message_id: msgId || null, error_message: metaErr, sent_at: now })
         .eq('broadcast_id', broadcast.id)
         .eq('contact_id', contact.id);
+      if (blocked) return;   // nothing was sent, so nothing to log in the chat
 
       const { data: conv } = await supabase.from('conversations').select('id')
         .eq('contact_id', contact.id).eq('business_id', broadcast.business_id).eq('status', 'open').maybeSingle();
