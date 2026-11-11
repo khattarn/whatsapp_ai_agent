@@ -1242,6 +1242,7 @@ async function sendMessage(content, approveSuggestionId = null) {
       document.getElementById('reply-textarea').value = '';
       await openConversation(state.currentConvId);
       await loadConversations();
+      if (res.ai_paused) toast('🤖 AI paused for this chat — you have the conversation');
     } else { toast('❌ ' + (res.error || 'Send failed')); }
   } catch (e) { toast('❌ Network error'); }
   finally { btn.innerHTML = '➤'; btn.disabled = false; }

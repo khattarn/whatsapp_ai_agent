@@ -120,18 +120,28 @@ exports.handler = async (event) => {
     }).select().single();
 
     // Update conversation
-    await supabase.from('conversations').update({
+    const convUpdate = {
       last_message: content,
       last_message_at: new Date().toISOString(),
       needs_human: false,
       unread_count: 0,
       updated_at: new Date().toISOString(),
-    }).eq('id', conversationId);
+    };
+
+    // Legal Aid (Nyaya Saathi): its bot is a menu state machine with no memory of what a human
+    // just said, so a person writing to the user means the bot must stand down or it will
+    // answer their reply with a stale menu prompt. Sending from the dashboard = taking over;
+    // webhook.js then stays silent for this chat until the AI is re-enabled (the "AI" toggle,
+    // Resolve, or the user typing "menu"). Other businesses keep their hybrid AI behaviour.
+    const aiPaused = biz.service_mode === 'legal_aid' && status === 'sent';
+    if (aiPaused) convUpdate.ai_enabled = false;
+
+    await supabase.from('conversations').update(convUpdate).eq('id', conversationId);
 
     return {
       statusCode: 200,
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ success: true, message: msg, result: sendResult }),
+      body: JSON.stringify({ success: true, message: msg, result: sendResult, ai_paused: aiPaused }),
     };
   } catch (err) {
     console.error('send-message error:', err);

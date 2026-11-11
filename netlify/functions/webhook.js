@@ -1242,6 +1242,20 @@ exports.handler = async (event) => {
 
       // ── Legal Aid branch — runs for Nyaya Saathi business ────────────
       if (business.service_mode === 'legal_aid') {
+        // Human takeover: ai_enabled=false means a person is handling this chat (set by the
+        // dashboard "AI Off" toggle, by an agent reply sent from the dashboard, or by the
+        // "Talk to Our Team" menu option). Stay silent so the bot doesn't talk over them.
+        // The inbound message is already stored + unread-counted above, so it still shows in
+        // the dashboard; flag it for review so it surfaces under "⚠️ Review". STOP/START are
+        // handled earlier. Typing "menu" hands the user back to the bot.
+        if (conversation.ai_enabled === false) {
+          const wantsMenu = ['menu', 'मेनू', 'मेनु'].includes((text || '').trim().toLowerCase());
+          if (!wantsMenu) {
+            await supabase.from('conversations').update({ needs_human: true }).eq('id', conversation.id);
+            return { statusCode: 200, body: 'OK' };
+          }
+          await supabase.from('conversations').update({ ai_enabled: true }).eq('id', conversation.id);
+        }
         if (msgType !== 'text' && msgType !== 'button' && msgType !== 'interactive' && msgType !== 'reaction') {
           const unsupportedReply = "Thanks for reaching out! We can't process audio/image messages right now. Please type your question and we'll be happy to help.";
           await sendWhatsAppMessage(business.access_token, phoneNumberId, fromPhone, unsupportedReply);
